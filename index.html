@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>行李檢查表 | Don Quijote OS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'media',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Inter"', '"Noto Sans TC"', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            surface: {
+              light: '#f8fafc',
+              dark: '#0f172a',
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* 自訂捲軸與微調樣式，確保嵌入 iframe 時俐落美觀 */
+    body {
+      font-family: "Inter", "Noto Sans TC", system-ui, -apple-system, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.35);
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.6);
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen antialiased selection:bg-emerald-500/20 selection:text-emerald-700 dark:selection:text-emerald-300">
+
+  <!-- 主容器：無過多外邊距，方便嵌入 Don Quijote OS 的 iframe 或卡片容器 -->
+  <div id="app" class="max-w-5xl mx-auto p-3 sm:p-5 md:p-6 pb-20">
+    
+    <!-- 頂部控制與進度儀表板 -->
+    <header class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm mb-5 sticky top-2 z-20 backdrop-blur-md bg-white/95 dark:bg-slate-900/95">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm shrink-0">
+            <!-- 背包/清單圖示 -->
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 id="list-title" class="text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors" title="點擊修改清單名稱">行李檢查表</h1>
+              <span class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/60">Don Quijote OS</span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5" id="status-subtitle">準備就緒，資料自動儲存於本機</p>
+          </div>
+        </div>
+
+        <!-- 主要功能按鈕列 -->
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- 篩選切換 -->
+          <div class="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200/60 dark:border-slate-700/60">
+            <button type="button" id="filter-all-btn" class="px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs">
+              顯示全部
+            </button>
+            <button type="button" id="filter-unchecked-btn" class="px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white">
+              只看未完成
+            </button>
+          </div>
+
+          <!-- 編輯模式切換 -->
+          <button type="button" id="toggle-edit-mode-btn" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 transition-all shadow-2xs">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            <span id="edit-mode-label">管理架構</span>
+          </button>
+
+          <!-- 清空打勾（保留架構） -->
+          <button type="button" id="reset-checks-btn" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-all">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>清空打勾</span>
+          </button>
+
+          <!-- 更多操作（匯出/匯入/範本） -->
+          <div class="relative" id="more-menu-container">
+            <button type="button" id="more-menu-btn" aria-label="更多選項" class="p-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-all">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z" />
+              </svg>
+            </button>
+            <div id="more-menu-dropdown" class="hidden absolute right-0 mt-2 w-48 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-lg py-1.5 z-30 text-xs">
+              <button type="button" id="export-json-btn" class="w-full text-left px-3.5 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/70 flex items-center gap-2 text-slate-700 dark:text-slate-200">
+                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                匯出備份 (JSON)
+              </button>
+              <button type="button" id="import-json-btn" class="w-full text-left px-3.5 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/70 flex items-center gap-2 text-slate-700 dark:text-slate-200">
+                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                匯入備份 (JSON)
+              </button>
+              <div class="my-1 border-t border-slate-100 dark:border-slate-700"></div>
+              <button type="button" id="load-template-btn" class="w-full text-left px-3.5 py-2 hover:bg-slate-100 dark:hover:bg-slate-700/70 flex items-center gap-2 text-slate-700 dark:text-slate-200">
+                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                載入預設旅行範本
+              </button>
+            </div>
+          </div>
+          <input type="file" id="import-file-input" accept=".json,application/json" class="hidden" />
+        </div>
+      </div>
+
+      <!-- 總進度條與統計資訊 -->
+      <div>
+        <div class="flex flex-wrap items-center justify-between gap-2 text-xs mb-1.5">
+          <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+            <span class="font-semibold text-slate-700 dark:text-slate-200">
+              打包進度：<span id="progress-count" class="text-emerald-600 dark:text-emerald-400 font-bold">0 / 0</span>
+            </span>
+            <span id="total-weight-badge" class="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+              已勾 / 總重：<strong id="checked-weight-value" class="font-semibold text-emerald-600 dark:text-emerald-400">0 kg</strong>
+              <span>/</span>
+              <strong id="total-weight-value" class="font-semibold text-slate-700 dark:text-slate-300">0 kg</strong>
+            </span>
+          </div>
+          <span id="progress-percent" class="font-bold text-emerald-600 dark:text-emerald-400">0%</span>
+        </div>
+        <div class="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+          <div id="progress-bar-fill" class="h-full bg-emerald-500 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 新增「大組（分類）」快速列 -->
+    <form id="add-category-form" class="mb-5 flex gap-2">
+      <input
+        type="text"
+        id="new-category-input"
+        placeholder="新增大組分類（例如：背負與睡眠系統、衣物與穿戴、電子與證件...）"
+        class="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 transition-all shadow-2xs"
+        required
+      />
+      <button
+        type="submit"
+        class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-emerald-600 hover:bg-slate-800 dark:hover:bg-emerald-500 text-white text-sm font-medium transition-all shadow-xs shrink-0 cursor-pointer"
+      >
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        <span>新增大組</span>
+      </button>
+    </form>
+
+    <!-- 大組清單網格（自適應單欄至雙欄） -->
+    <main id="categories-container" class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+      <!-- 由 JavaScript 動態渲染大組、小組與細項 -->
+    </main>
+
+    <!-- 空狀態提示 -->
+    <div id="empty-state" class="hidden text-center py-14 px-4 bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl">
+      <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mx-auto mb-3">
+        <i data-lucide="backpack" class="w-6 h-6"></i>
+      </div>
+      <h3 class="text-base font-semibold text-slate-800 dark:text-slate-200" id="empty-state-title">目前沒有任何行李分類</h3>
+      <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4" id="empty-state-desc">在上方輸入大組名稱開始建立，或直接載入長途徒步與旅行範例範本。</p>
+      <button type="button" id="empty-load-template-btn" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition-all cursor-pointer">
+        載入預設旅行範本
+      </button>
+    </div>
+  </div>
+
+  <!-- 自訂對話框 Modal（取代原生 alert / confirm / prompt，支援三層編輯與移動選項） -->
+  <div id="custom-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-xs">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-5 shadow-xl transform transition-all">
+      <h3 id="modal-title" class="text-base font-bold text-slate-900 dark:text-white mb-1.5">確認操作</h3>
+      <p id="modal-message" class="text-sm text-slate-600 dark:text-slate-300 mb-4 leading-relaxed"></p>
+      
+      <!-- 編輯表單區塊（視情況顯示） -->
+      <div id="modal-inputs" class="hidden space-y-3 mb-5">
+        <div>
+          <label for="modal-input-name" class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">名稱</label>
+          <input type="text" id="modal-input-name" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500" />
+        </div>
+        <div id="modal-extra-fields" class="space-y-3">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label for="modal-input-qty" class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">數量</label>
+              <input type="number" id="modal-input-qty" min="1" placeholder="1" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500" />
+            </div>
+            <div>
+              <label for="modal-input-weight" class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">單件克數 (g)</label>
+              <input type="number" id="modal-input-weight" min="0" placeholder="例如: 250" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500" />
+            </div>
+          </div>
+          <div>
+            <label for="modal-input-note" class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">備註（選填）</label>
+            <input type="text" id="modal-input-note" placeholder="例如：隨身登機、防水袋收納..." class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500" />
+          </div>
+          <div id="modal-location-wrap">
+            <label for="modal-input-location" class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">所屬位置（可歸類進小組或移回大組直屬）</label>
+            <select id="modal-input-location" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500">
+              <!-- 動態填入大組直屬與各小組選項 -->
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 刪除小組時的雙選項按鈕（保留細項移回直屬 vs 連同細項刪除） -->
+      <div id="modal-subgroup-delete-actions" class="hidden flex-col sm:flex-row justify-end gap-2">
+        <button type="button" id="modal-sub-cancel-btn" class="px-3.5 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+          取消
+        </button>
+        <button type="button" id="modal-sub-move-btn" class="px-3.5 py-2 rounded-xl text-xs font-medium bg-amber-600 hover:bg-amber-500 text-white transition-colors shadow-2xs cursor-pointer">
+          僅刪小組（細項移回大組直屬）
+        </button>
+        <button type="button" id="modal-sub-purge-btn" class="px-3.5 py-2 rounded-xl text-xs font-medium bg-rose-600 hover:bg-rose-500 text-white transition-colors shadow-2xs cursor-pointer">
+          連同細項一併刪除
+        </button>
+      </div>
+
+      <!-- 一般確認/取消按鈕 -->
+      <div id="modal-standard-actions" class="flex justify-end gap-2">
+        <button type="button" id="modal-cancel-btn" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+          取消
+        </button>
+        <button type="button" id="modal-confirm-btn" class="px-4 py-2 rounded-xl text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors shadow-2xs cursor-pointer">
+          確定
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 輕量提示 Toast -->
+  <div id="toast" class="fixed bottom-4 right-4 z-50 pointer-events-none opacity-0 translate-y-2 transition-all duration-200 bg-slate-900 dark:bg-slate-800 text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-lg border border-slate-700/60 flex items-center gap-2">
+    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+    <span id="toast-message">已儲存變更</span>
+  </div>
+
+  <script>
+    /**
+     * Don Quijote OS - 三層彈性行李檢查表模組 (v2)
+     * 架構：大組 (Category) -> 小組 (Subgroup, 可選) -> 細項 (Item)
+     * 若大組未設小組或有未歸類細項，則於大組主體直接顯示直屬細項。
+     */
+    (function () {
+      const STORAGE_KEY_V2 = 'don_quijote_os_packing_checklist_v2';
+      const STORAGE_KEY_V1 = 'don_quijote_os_packing_checklist_v1';
+
+      // 預設長途徒步與旅行範例範本（示範「有設小組」與「沒設小組直接接細項」兩種呈現方式）
+      const DEFAULT_TEMPLATE = {
+        title: '行李檢查表',
+        categories: [
+          {
+            id: 'cat-docs',
+            name: '證件與隨身財務（無小組直接列細項）',
+            collapsed: false,
+            items: [
+              { id: 'item-1', name: '護照（確認效期 6 個月以上）', checked: false, qty: 1, weight: 40, note: '隨身防水夾層' },
+              { id: 'item-2', name: '身分證 / 駕照 / 日文譯本', checked: false, qty: 1, weight: 20, note: '' },
+              { id: 'item-3', name: '外幣現金與海外回饋信用卡', checked: false, qty: 1, weight: 80, note: '分開放兩處' },
+              { id: 'item-4', name: '機票與住宿憑證（離線備份）', checked: false, qty: 1, weight: 0, note: '' }
+            ],
+            subgroups: []
+          },
+          {
+            id: 'cat-clothes',
+            name: '衣物與穿戴（含小組分層）',
+            collapsed: false,
+            items: [
+              { id: 'item-c0', name: '太陽眼鏡與遮陽帽', checked: false, qty: 1, weight: 95, note: '掛背包外層快取' }
+            ],
+            subgroups: [
+              {
+                id: 'sub-active',
+                name: '行進層（貼身與透氣）',
+                collapsed: false,
+                items: [
+                  { id: 'item-c1', name: '美麗諾羊毛排汗短袖', checked: false, qty: 2, weight: 160, note: '抗臭快乾' },
+                  { id: 'item-c2', name: '防潑水彈性長褲', checked: false, qty: 2, weight: 340, note: '' },
+                  { id: 'item-c3', name: '徒步減震羊毛襪', checked: false, qty: 3, weight: 75, note: '' }
+                ]
+              },
+              {
+                id: 'sub-warmth',
+                name: '備用與防風保暖層',
+                collapsed: false,
+                items: [
+                  { id: 'item-c4', name: '輕量羽絨 / 化纖保暖外套', checked: false, qty: 1, weight: 320, note: '壓縮袋收納' },
+                  { id: 'item-c5', name: 'GORE-TEX 防水衝鋒衣', checked: false, qty: 1, weight: 380, note: '' }
+                ]
+              }
+            ]
+          },
+          {
+            id: 'cat-gear',
+            name: '背負與電子補給',
+            collapsed: false,
+            items: [
+              { id: 'item-g0', name: '40L 輕量化主背包 + 防水背包套', checked: false, qty: 1, weight: 1150, note: '' }
+            ],
+            subgroups: [
+              {
+                id: 'sub-power',
+                name: '電力與導航通訊',
+                collapsed: false,
+                items: [
+                  { id: 'item-g1', name: '智慧型手機 + 離線地圖', checked: false, qty: 1, weight: 210, note: '' },
+                  { id: 'item-g2', name: '10000mAh 行動電源（務必隨身登機）', checked: false, qty: 1, weight: 215, note: '不可託運' },
+                  { id: 'item-g3', name: '多孔 GaN 充電器與萬國轉接頭', checked: false, qty: 1, weight: 170, note: '' }
+                ]
+              }
+            ]
+          },
+          {
+            id: 'cat-care',
+            name: '個人衛生與常備藥',
+            collapsed: false,
+            items: [
+              { id: 'item-13', name: '牙刷、牙膏與旅行組洗面乳', checked: false, qty: 1, weight: 140, note: '' },
+              { id: 'item-14', name: '個人常備藥（止痛、腸胃、暈車、OK繃）', checked: false, qty: 1, weight: 120, note: '夾鏈袋分裝' },
+              { id: 'item-15', name: '隨身面紙與純水濕紙巾', checked: false, qty: 2, weight: 80, note: '' }
+            ],
+            subgroups: []
+          }
+        ]
+      };
+
+      // 應用程式狀態
+      let state = {
+        title: '行李檢查表',
+        categories: [],
+        filter: 'all', // 'all' | 'unchecked'
+        editMode: false
+      };
+
+      // 產生唯一 ID
+      const uid = (prefix = 'id') => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+
+      // 資料正規化：確保每個大組都有 items 與 subgroups 陣列，且細項具備完整欄位
+      function normalizeCategories(rawCategories) {
+        if (!Array.isArray(rawCategories)) return [];
+        return rawCategories.map(cat => ({
+          id: cat.id || uid('cat'),
+          name: cat.name || '未命名大組',
+          collapsed: Boolean(cat.collapsed),
+          items: Array.isArray(cat.items) ? cat.items.map(normalizeItem) : [],
+          subgroups: Array.isArray(cat.subgroups)
+            ? cat.subgroups.map(sub => ({
+                id: sub.id || uid('sub'),
+                name: sub.name || '未命名小組',
+                collapsed: Boolean(sub.collapsed),
+                items: Array.isArray(sub.items) ? sub.items.map(normalizeItem) : []
+              }))
+            : []
+        }));
+      }
+
+      function normalizeItem(item) {
+        return {
+          id: item.id || uid('item'),
+          name: item.name || '未命名項目',
+          checked: Boolean(item.checked),
+          qty: Math.max(1, parseInt(item.qty, 10) || 1),
+          weight: Math.max(0, parseInt(item.weight, 10) || 0),
+          note: item.note ? String(item.note) : ''
+        };
+      }
+
+      // 讀取本地資料（含 v1 舊版資料自動升級）
+      function loadState() {
+        try {
+          const rawV2 = localStorage.getItem(STORAGE_KEY_V2);
+          if (rawV2) {
+            const parsed = JSON.parse(rawV2);
+            if (parsed && Array.isArray(parsed.categories)) {
+              state.title = parsed.title || '行李檢查表';
+              state.categories = normalizeCategories(parsed.categories);
+              return;
+            }
+          }
+
+          // 檢查是否有 v1 舊版資料並自動升級
+          const rawV1 = localStorage.getItem(STORAGE_KEY_V1);
+          if (rawV1) {
+            const parsedV1 = JSON.parse(rawV1);
+            if (parsedV1 && Array.isArray(parsedV1.categories)) {
+              state.title = parsedV1.title || '行李檢查表';
+              state.categories = normalizeCategories(parsedV1.categories);
+              saveState(false);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('讀取儲存資料失敗:', err);
+        }
+
+        // 初次使用載入預設範本
+        state.title = DEFAULT_TEMPLATE.title;
+        state.categories = normalizeCategories(JSON.parse(JSON.stringify(DEFAULT_TEMPLATE.categories)));
+        saveState(false);
+      }
+
+      // 儲存本地資料並透過 postMessage 通知父層視窗（Don Quijote OS 整合用）
+      function saveState(notifyToast = true, message = '已自動儲存') {
+        try {
+          const payload = {
+            version: 2,
+            title: state.title,
+            categories: state.categories,
+            updatedAt: new Date().toISOString()
+          };
+          localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(payload));
+
+          if (window.parent && window.parent !== window) {
+            const stats = calculateStats();
+            window.parent.postMessage({
+              source: 'don-quijote-os-packing',
+              type: 'DON_QUIJOTE_PACKING_SYNC',
+              stats
+            }, '*');
+          }
+
+          if (notifyToast) {
+            showToast(message);
+          }
+        } catch (err) {
+          console.error('儲存資料失敗:', err);
+          showToast('儲存失敗，請檢查瀏覽器空間');
+        }
+      }
+
+      // 計算進度、已勾重量與全部清單總重量（涵蓋大組直屬與所有小組內細項）
+      function calculateStats() {
+        let total = 0;
+        let checked = 0;
+        let totalWeight = 0;
+        let checkedWeight = 0;
+
+        const tallyItem = (item) => {
+          total += 1;
+          const qty = Number(item.qty) || 1;
+          const w = (Number(item.weight) || 0) * qty;
+          totalWeight += w;
+          if (item.checked) {
+            checked += 1;
+            checkedWeight += w;
+          }
+        };
+
+        state.categories.forEach(cat => {
+          cat.items.forEach(tallyItem);
+          cat.subgroups.forEach(sub => {
+            sub.items.forEach(tallyItem);
+          });
+        });
+
+        const percent = total === 0 ? 0 : Math.round((checked / total) * 100);
+        return { total, checked, percent, totalWeight, checkedWeight };
+      }
+
+      // 顯示輕量提示訊息
+      let toastTimer = null;
+      function showToast(msg) {
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toast-message');
+        toastMsg.textContent = msg;
+        toast.classList.remove('opacity-0', 'translate-y-2');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toast.classList.add('opacity-0', 'translate-y-2');
+        }, 2000);
+      }
+
+      // 自訂 Modal 控制器（支援名稱輸入、細項完整編輯與位置轉移、以及刪除小組雙選項）
+      function openModal({
+        title,
+        message = '',
+        mode = 'confirm', // 'confirm' | 'input-simple' | 'edit-item' | 'delete-subgroup'
+        defaultName = '',
+        defaultQty = 1,
+        defaultWeight = 0,
+        defaultNote = '',
+        locationOptions = [],
+        defaultLocation = 'direct',
+        confirmText = '確定',
+        confirmClass = 'bg-emerald-600 hover:bg-emerald-500 text-white'
+      }) {
+        return new Promise((resolve) => {
+          const modal = document.getElementById('custom-modal');
+          const titleEl = document.getElementById('modal-title');
+          const msgEl = document.getElementById('modal-message');
+          const inputsWrap = document.getElementById('modal-inputs');
+          const extraFields = document.getElementById('modal-extra-fields');
+          const nameInput = document.getElementById('modal-input-name');
+          const qtyInput = document.getElementById('modal-input-qty');
+          const weightInput = document.getElementById('modal-input-weight');
+          const noteInput = document.getElementById('modal-input-note');
+          const locationSelect = document.getElementById('modal-input-location');
+
+          const standardActions = document.getElementById('modal-standard-actions');
+          const cancelBtn = document.getElementById('modal-cancel-btn');
+          const confirmBtn = document.getElementById('modal-confirm-btn');
+
+          const subDeleteActions = document.getElementById('modal-subgroup-delete-actions');
+          const subCancelBtn = document.getElementById('modal-sub-cancel-btn');
+          const subMoveBtn = document.getElementById('modal-sub-move-btn');
+          const subPurgeBtn = document.getElementById('modal-sub-purge-btn');
+
+          titleEl.textContent = title;
+          msgEl.textContent = message;
+          msgEl.classList.toggle('hidden', !message);
+
+          const isInputMode = mode === 'input-simple' || mode === 'edit-item';
+          inputsWrap.classList.toggle('hidden', !isInputMode);
+          extraFields.classList.toggle('hidden', mode !== 'edit-item');
+
+          standardActions.classList.toggle('hidden', mode === 'delete-subgroup');
+          subDeleteActions.classList.toggle('hidden', mode !== 'delete-subgroup');
+          if (mode === 'delete-subgroup') {
+            subDeleteActions.classList.add('flex');
+          } else {
+            subDeleteActions.classList.remove('flex');
+          }
+
+          if (isInputMode) {
+            nameInput.value = defaultName;
+          }
+          if (mode === 'edit-item') {
+            qtyInput.value = defaultQty || 1;
+            weightInput.value = defaultWeight > 0 ? defaultWeight : '';
+            noteInput.value = defaultNote || '';
+            locationSelect.innerHTML = locationOptions
+              .map(opt => `<option value="${escapeHtml(opt.value)}" ${opt.value === defaultLocation ? 'selected' : ''}>${escapeHtml(opt.label)}</option>`)
+              .join('');
+          }
+
+          confirmBtn.textContent = confirmText;
+          confirmBtn.className = `px-4 py-2 rounded-xl text-xs font-medium transition-colors shadow-2xs cursor-pointer ${confirmClass}`;
+
+          modal.classList.remove('hidden');
+
+          if (isInputMode) {
+            setTimeout(() => {
+              nameInput.focus();
+              nameInput.select();
+            }, 30);
+          } else if (mode === 'delete-subgroup') {
+            setTimeout(() => subMoveBtn.focus(), 30);
+          } else {
+            setTimeout(() => confirmBtn.focus(), 30);
+          }
+
+          const cleanup = () => {
+            modal.classList.add('hidden');
+            cancelBtn.removeEventListener('click', onCancel);
+            confirmBtn.removeEventListener('click', onConfirm);
+            subCancelBtn.removeEventListener('click', onCancel);
+            subMoveBtn.removeEventListener('click', onSubMove);
+            subPurgeBtn.removeEventListener('click', onSubPurge);
+            modal.removeEventListener('click', onBackdrop);
+            document.removeEventListener('keydown', onKeydown);
+          };
+
+          const onCancel = () => {
+            cleanup();
+            resolve(null);
+          };
+
+          const onSubMove = () => {
+            cleanup();
+            resolve('move');
+          };
+
+          const onSubPurge = () => {
+            cleanup();
+            resolve('purge');
+          };
+
+          const onConfirm = () => {
+            if (isInputMode) {
+              const trimmed = nameInput.value.trim();
+              if (!trimmed) {
+                nameInput.focus();
+                return;
+              }
+              cleanup();
+              if (mode === 'edit-item') {
+                resolve({
+                  name: trimmed,
+                  qty: Math.max(1, parseInt(qtyInput.value, 10) || 1),
+                  weight: Math.max(0, parseInt(weightInput.value, 10) || 0),
+                  note: noteInput.value.trim(),
+                  location: locationSelect.value
+                });
+              } else {
+                resolve({ name: trimmed });
+              }
+            } else {
+              cleanup();
+              resolve(true);
+            }
+          };
+
+          const onBackdrop = (e) => {
+            if (e.target === modal) onCancel();
+          };
+
+          const onKeydown = (e) => {
+            if (e.key === 'Escape') onCancel();
+            if (e.key === 'Enter' && isInputMode) {
+              e.preventDefault();
+              onConfirm();
+            }
+          };
+
+          cancelBtn.addEventListener('click', onCancel);
+          confirmBtn.addEventListener('click', onConfirm);
+          subCancelBtn.addEventListener('click', onCancel);
+          subMoveBtn.addEventListener('click', onSubMove);
+          subPurgeBtn.addEventListener('click', onSubPurge);
+          modal.addEventListener('click', onBackdrop);
+          document.addEventListener('keydown', onKeydown);
+        });
+      }
+
+      // HTML 跳脫防 XSS
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+
+      // 格式化重量顯示（單件或總重）
+      function formatWeight(grams, forceKg = false) {
+        if (!grams || grams <= 0) return forceKg ? '0 kg' : '';
+        if (forceKg || grams >= 1000) {
+          return `${(grams / 1000).toFixed(2).replace(/\.?0+$/, '')} kg`;
+        }
+        return `${grams} g`;
+      }
+
+      // 渲染單一細項列表項目（供大組直屬與小組共用）
+      function renderItemRow(catId, subId, item) {
+        const subAttr = subId ? `data-sub-id="${subId}"` : '';
+        const qtyBadge = item.qty > 1
+          ? `<span class="text-[11px] font-medium px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">×${item.qty}</span>`
+          : '';
+        const weightStr = formatWeight((Number(item.weight) || 0) * (Number(item.qty) || 1));
+        const weightBadge = weightStr
+          ? `<span class="text-[11px] text-slate-400 dark:text-slate-500">${weightStr}</span>`
+          : '';
+        const noteTag = item.note
+          ? `<span class="text-[11px] text-amber-700/80 dark:text-amber-300/80 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.5 rounded-md truncate max-w-[140px]" title="${escapeHtml(item.note)}">${escapeHtml(item.note)}</span>`
+          : '';
+
+        return `
+          <li class="group flex items-center justify-between gap-2 py-1.5 px-2.5 rounded-xl hover:bg-slate-100/70 dark:hover:bg-slate-800/70 transition-colors">
+            <label class="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                data-action="toggle-item"
+                data-cat-id="${catId}"
+                ${subAttr}
+                data-item-id="${item.id}"
+                ${item.checked ? 'checked' : ''}
+                class="w-4 h-4 rounded-md border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500/40 bg-white dark:bg-slate-800 cursor-pointer shrink-0 accent-emerald-600"
+              />
+              <span class="text-sm truncate transition-all ${item.checked ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-700 dark:text-slate-200'}">
+                ${escapeHtml(item.name)}
+              </span>
+              <div class="flex items-center gap-1.5 shrink-0">
+                ${qtyBadge}
+                ${weightBadge}
+                ${noteTag}
+              </div>
+            </label>
+
+            <!-- 細項編輯與刪除按鈕 -->
+            <div class="flex items-center gap-0.5 shrink-0 ${state.editMode ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100'} transition-opacity">
+              <button
+                type="button"
+                data-action="edit-item"
+                data-cat-id="${catId}"
+                ${subAttr}
+                data-item-id="${item.id}"
+                title="編輯細項（名稱 / 數量 / 重量 / 移動所屬小組）"
+                class="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-200/70 dark:hover:bg-slate-700/70 transition-colors cursor-pointer"
+              >
+                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+              </button>
+              <button
+                type="button"
+                data-action="delete-item"
+                data-cat-id="${catId}"
+                ${subAttr}
+                data-item-id="${item.id}"
+                title="刪除細項"
+                class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
+              >
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </li>
+        `;
+      }
+
+      // 渲染快速新增細項輸入列（大組直屬或小組共用）
+      function renderQuickAddForm(catId, subId, placeholderText) {
+        const subAttr = subId ? `data-sub-id="${subId}"` : '';
+        return `
+          <form data-action="add-item-form" data-cat-id="${catId}" ${subAttr} class="flex items-center gap-1.5 pt-1.5">
+            <input
+              type="text"
+              name="itemName"
+              placeholder="${placeholderText}"
+              required
+              class="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-800 rounded-xl px-3 py-1.5 text-xs placeholder:text-slate-400 focus:outline-none transition-all"
+            />
+            <input
+              type="number"
+              name="itemQty"
+              min="1"
+              placeholder="數量"
+              title="數量（預設 1）"
+              class="w-13 bg-slate-50 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-800 rounded-xl px-1.5 py-1.5 text-xs text-center placeholder:text-slate-400 focus:outline-none transition-all"
+            />
+            <input
+              type="number"
+              name="itemWeight"
+              min="0"
+              placeholder="克數g"
+              title="單件重量 g（選填）"
+              class="w-15 hidden sm:block bg-slate-50 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-800 rounded-xl px-1.5 py-1.5 text-xs text-center placeholder:text-slate-400 focus:outline-none transition-all"
+            />
+            <button
+              type="submit"
+              title="新增細項"
+              class="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 text-slate-600 dark:text-slate-300 transition-colors shrink-0 cursor-pointer"
+            >
+              <i data-lucide="plus" class="w-4 h-4"></i>
+            </button>
+          </form>
+        `;
+      }
+
+      // 渲染整個介面
+      function render() {
+        const container = document.getElementById('categories-container');
+        const emptyState = document.getElementById('empty-state');
+        const titleEl = document.getElementById('list-title');
+        const editBtn = document.getElementById('toggle-edit-mode-btn');
+        const editLabel = document.getElementById('edit-mode-label');
+
+        titleEl.textContent = state.title;
+
+        // 更新編輯模式按鈕外觀
+        if (state.editMode) {
+          editBtn.className = 'inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl border border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 transition-all shadow-2xs';
+          editLabel.textContent = '完成編輯';
+        } else {
+          editBtn.className = 'inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 transition-all shadow-2xs';
+          editLabel.textContent = '管理架構';
+        }
+
+        // 更新篩選按鈕狀態
+        const allBtn = document.getElementById('filter-all-btn');
+        const uncheckedBtn = document.getElementById('filter-unchecked-btn');
+        const activeTabClass = 'px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs';
+        const inactiveTabClass = 'px-2.5 py-1.5 text-xs font-medium rounded-lg transition-all text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white';
+        allBtn.className = state.filter === 'all' ? activeTabClass : inactiveTabClass;
+        uncheckedBtn.className = state.filter === 'unchecked' ? activeTabClass : inactiveTabClass;
+
+        // 更新總進度與重量統計
+        const stats = calculateStats();
+        document.getElementById('progress-count').textContent = `${stats.checked} / ${stats.total}`;
+        document.getElementById('progress-percent').textContent = `${stats.percent}%`;
+        document.getElementById('progress-bar-fill').style.width = `${stats.percent}%`;
+        document.getElementById('checked-weight-value').textContent = formatWeight(stats.checkedWeight, true);
+        document.getElementById('total-weight-value').textContent = formatWeight(stats.totalWeight, true);
+
+        const subtitle = document.getElementById('status-subtitle');
+        if (stats.total > 0 && stats.checked === stats.total) {
+          subtitle.textContent = '所有行李項目皆已確認完畢，祝旅途順利！';
+          subtitle.className = 'text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-0.5';
+        } else {
+          subtitle.textContent = state.editMode
+            ? '架構管理模式：可調整大組與小組順序、新增小組或移動細項'
+            : '大組內可自由建立「小組」，沒設小組則直接顯示細項';
+          subtitle.className = 'text-xs text-slate-500 dark:text-slate-400 mt-0.5';
+        }
+
+        // 處理空狀態
+        if (state.categories.length === 0) {
+          container.innerHTML = '';
+          emptyState.classList.remove('hidden');
+          document.getElementById('empty-state-title').textContent = '目前沒有任何行李分類';
+          document.getElementById('empty-state-desc').textContent = '在上方輸入大組名稱開始建立，或直接載入預設旅行範本。';
+          document.getElementById('empty-load-template-btn').classList.remove('hidden');
+          lucide.createIcons();
+          return;
+        }
+
+        emptyState.classList.add('hidden');
+
+        // 渲染每個大組卡片（三層結構：大組 -> 直屬細項 + 小組區塊）
+        let renderedCategoriesCount = 0;
+        const html = state.categories.map((cat, catIndex) => {
+          // 計算整個大組（直屬 + 所有小組）的總項目數與完成數
+          const subTotal = cat.subgroups.reduce((acc, s) => acc + s.items.length, 0);
+          const subChecked = cat.subgroups.reduce((acc, s) => acc + s.items.filter(i => i.checked).length, 0);
+          const catTotal = cat.items.length + subTotal;
+          const catChecked = cat.items.filter(i => i.checked).length + subChecked;
+          const isCatComplete = catTotal > 0 && catChecked === catTotal;
+
+          // 若處於「只看未完成」且非編輯模式，隱藏已全數完成的大組
+          if (state.filter === 'unchecked' && !state.editMode && catTotal > 0 && isCatComplete) {
+            return '';
+          }
+
+          renderedCategoriesCount++;
+
+          // 1. 渲染「大組直屬細項」區塊（沒設小組時直接接細項；若有設小組且仍有直屬細項也一併顯示）
+          const visibleDirectItems = state.filter === 'unchecked'
+            ? cat.items.filter(i => !i.checked)
+            : cat.items;
+
+          const hasSubgroups = cat.subgroups.length > 0;
+          const showDirectSection = !hasSubgroups || cat.items.length > 0 || state.editMode;
+
+          const directItemsHtml = visibleDirectItems.length > 0
+            ? `<ul class="space-y-0.5">${visibleDirectItems.map(item => renderItemRow(cat.id, null, item)).join('')}</ul>`
+            : (cat.items.length === 0 && !hasSubgroups
+                ? `<p class="text-xs text-slate-400 dark:text-slate-500 text-center py-2.5">尚無細項，可直接在下方新增細項，或點擊右上角「+ 小組」建立分層</p>`
+                : '');
+
+          const directSectionHtml = showDirectSection ? `
+            <div class="${hasSubgroups ? 'pb-3 mb-3 border-b border-dashed border-slate-200 dark:border-slate-800' : ''}">
+              ${hasSubgroups && (cat.items.length > 0 || state.editMode)
+                ? `<div class="flex items-center justify-between px-2 mb-1">
+                     <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">未分小組（直屬細項）</span>
+                   </div>`
+                : ''}
+              ${directItemsHtml}
+              ${renderQuickAddForm(cat.id, null, hasSubgroups ? '新增直屬細項...' : '新增細項...')}
+            </div>
+          ` : '';
+
+          // 2. 渲染「小組 (Subgroup)」區塊列表
+          const subgroupsHtml = cat.subgroups.map((sub, subIndex) => {
+            const sTotal = sub.items.length;
+            const sChecked = sub.items.filter(i => i.checked).length;
+            const isSubComplete = sTotal > 0 && sChecked === sTotal;
+
+            if (state.filter === 'unchecked' && !state.editMode && sTotal > 0 && isSubComplete) {
+              return '';
+            }
+
+            const visibleSubItems = state.filter === 'unchecked'
+              ? sub.items.filter(i => !i.checked)
+              : sub.items;
+
+            return `
+              <div class="rounded-xl bg-slate-50/90 dark:bg-slate-800/45 border border-slate-200/70 dark:border-slate-700/60 border-l-4 ${isSubComplete ? 'border-l-emerald-500' : 'border-l-amber-500/80'} p-2.5 transition-all">
+                <!-- 小組標題列 -->
+                <div class="flex items-center justify-between gap-2 mb-1.5">
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <button
+                      type="button"
+                      data-action="toggle-sub-collapse"
+                      data-cat-id="${cat.id}"
+                      data-sub-id="${sub.id}"
+                      title="${sub.collapsed ? '展開小組' : '收合小組'}"
+                      class="p-0.5 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-transform cursor-pointer ${sub.collapsed ? '-rotate-90' : ''}"
+                    >
+                      <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <i data-lucide="folder-open" class="w-3.5 h-3.5 text-amber-600/80 dark:text-amber-400/80 shrink-0"></i>
+                    <h3
+                      data-action="edit-subgroup"
+                      data-cat-id="${cat.id}"
+                      data-sub-id="${sub.id}"
+                      title="點擊修改小組名稱"
+                      class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 truncate cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                    >
+                      ${escapeHtml(sub.name)}
+                    </h3>
+                    <span class="text-[11px] font-medium px-1.5 py-0.2 rounded-full shrink-0 ${isSubComplete ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-slate-200/80 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}">
+                      ${sChecked}/${sTotal}
+                    </span>
+                  </div>
+
+                  <!-- 小組管理操作（排序 / 編輯 / 刪除） -->
+                  <div class="flex items-center gap-0.5 shrink-0">
+                    ${state.editMode ? `
+                      <button
+                        type="button"
+                        data-action="move-sub-up"
+                        data-cat-id="${cat.id}"
+                        data-sub-id="${sub.id}"
+                        ${subIndex === 0 ? 'disabled' : ''}
+                        title="小組上移"
+                        class="p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-30 cursor-pointer"
+                      >
+                        <i data-lucide="arrow-up" class="w-3 h-3"></i>
+                      </button>
+                      <button
+                        type="button"
+                        data-action="move-sub-down"
+                        data-cat-id="${cat.id}"
+                        data-sub-id="${sub.id}"
+                        ${subIndex === cat.subgroups.length - 1 ? 'disabled' : ''}
+                        title="小組下移"
+                        class="p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-30 cursor-pointer"
+                      >
+                        <i data-lucide="arrow-down" class="w-3 h-3"></i>
+                      </button>
+                    ` : ''}
+                    <button
+                      type="button"
+                      data-action="edit-subgroup"
+                      data-cat-id="${cat.id}"
+                      data-sub-id="${sub.id}"
+                      title="重新命名小組"
+                      class="p-1 rounded-md text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
+                    >
+                      <i data-lucide="pencil" class="w-3 h-3"></i>
+                    </button>
+                    <button
+                      type="button"
+                      data-action="delete-subgroup"
+                      data-cat-id="${cat.id}"
+                      data-sub-id="${sub.id}"
+                      title="刪除小組"
+                      class="p-1 rounded-md text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
+                    >
+                      <i data-lucide="trash-2" class="w-3 h-3"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 小組內的細項列表 -->
+                <div class="${sub.collapsed ? 'hidden' : 'block'}">
+                  ${visibleSubItems.length > 0
+                    ? `<ul class="space-y-0.5 mb-1">${visibleSubItems.map(item => renderItemRow(cat.id, sub.id, item)).join('')}</ul>`
+                    : `<p class="text-[11px] text-slate-400 dark:text-slate-500 text-center py-2">${sTotal === 0 ? '此小組尚無細項' : '此小組項目已全數完成！'}</p>`
+                  }
+                  ${renderQuickAddForm(cat.id, sub.id, `新增「${sub.name}」細項...`)}
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          return `
+            <section class="bg-white dark:bg-slate-900 border ${isCatComplete ? 'border-emerald-200 dark:border-emerald-900/60' : 'border-slate-200/80 dark:border-slate-800'} rounded-2xl shadow-2xs overflow-hidden transition-all">
+              <!-- 大組標題列 -->
+              <div class="px-4 py-3 bg-slate-50/90 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <button
+                    type="button"
+                    data-action="toggle-collapse"
+                    data-cat-id="${cat.id}"
+                    title="${cat.collapsed ? '展開大組' : '收合大組'}"
+                    class="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 transition-transform cursor-pointer ${cat.collapsed ? '-rotate-90' : ''}"
+                  >
+                    <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                  </button>
+
+                  <h2
+                    data-action="edit-category"
+                    data-cat-id="${cat.id}"
+                    title="點擊重新命名大組"
+                    class="font-bold text-sm sm:text-base text-slate-800 dark:text-slate-100 truncate cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                  >
+                    ${escapeHtml(cat.name)}
+                  </h2>
+
+                  <span class="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${isCatComplete ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-slate-200/70 text-slate-600 dark:bg-slate-800 dark:text-slate-400'}">
+                    ${catChecked}/${catTotal}
+                  </span>
+                </div>
+
+                <!-- 大組操作工具列（+ 小組 / 排序 / 編輯 / 刪除） -->
+                <div class="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    data-action="add-subgroup"
+                    data-cat-id="${cat.id}"
+                    title="在此大組內建立小組"
+                    class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors cursor-pointer"
+                  >
+                    <i data-lucide="folder-plus" class="w-3 h-3"></i>
+                    <span>+ 小組</span>
+                  </button>
+
+                  ${state.editMode ? `
+                    <button
+                      type="button"
+                      data-action="move-cat-up"
+                      data-cat-id="${cat.id}"
+                      ${catIndex === 0 ? 'disabled' : ''}
+                      title="大組上移"
+                      class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-30 cursor-pointer"
+                    >
+                      <i data-lucide="arrow-up" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button
+                      type="button"
+                      data-action="move-cat-down"
+                      data-cat-id="${cat.id}"
+                      ${catIndex === state.categories.length - 1 ? 'disabled' : ''}
+                      title="大組下移"
+                      class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-30 cursor-pointer"
+                    >
+                      <i data-lucide="arrow-down" class="w-3.5 h-3.5"></i>
+                    </button>
+                  ` : ''}
+
+                  <button
+                    type="button"
+                    data-action="edit-category"
+                    data-cat-id="${cat.id}"
+                    title="編輯大組名稱"
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-200/60 dark:hover:bg-slate-700/60 transition-colors cursor-pointer"
+                  >
+                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                  </button>
+
+                  <button
+                    type="button"
+                    data-action="delete-category"
+                    data-cat-id="${cat.id}"
+                    title="刪除大組"
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 transition-colors cursor-pointer"
+                  >
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 大組內容區：包含「直屬細項」與「小組區塊」 -->
+              <div class="${cat.collapsed ? 'hidden' : 'block'} p-3">
+                ${directSectionHtml}
+                ${hasSubgroups ? `<div class="space-y-3">${subgroupsHtml}</div>` : ''}
+              </div>
+            </section>
+          `;
+        }).join('');
+
+        container.innerHTML = html;
+
+        // 若開啟「只看未完成」且所有項目皆已打勾，顯示友善完成提示
+        if (state.filter === 'unchecked' && renderedCategoriesCount === 0 && stats.total > 0) {
+          emptyState.classList.remove('hidden');
+          document.getElementById('empty-state-title').textContent = '太棒了！所有項目都已打勾完成';
+          document.getElementById('empty-state-desc').textContent = '切換回「顯示全部」檢視完整清單，或點擊右上角「清空打勾」準備下一趟旅程。';
+          document.getElementById('empty-load-template-btn').classList.add('hidden');
+        }
+
+        // 渲染 Lucide 圖示
+        if (window.lucide) {
+          lucide.createIcons();
+        }
+      }
+
+      // ================= 事件委派與互動邏輯 =================
+
+      // 1. 新增「大組」
+      document.getElementById('add-category-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const input = document.getElementById('new-category-input');
+        const name = input.value.trim();
+        if (!name) return;
+
+        state.categories.push({
+          id: uid('cat'),
+          name,
+          collapsed: false,
+          items: [],
+          subgroups: []
+        });
+        input.value = '';
+        saveState(true, `已新增大組「${name}」`);
+        render();
+      });
+
+      // 2. 清單總標題點擊編輯
+      document.getElementById('list-title').addEventListener('click', async () => {
+        const res = await openModal({
+          title: '修改檢查表標題',
+          mode: 'input-simple',
+          defaultName: state.title,
+          confirmText: '儲存名稱'
+        });
+        if (res && res.name) {
+          state.title = res.name;
+          saveState(true, '已更新清單標題');
+          render();
+        }
+      });
+
+      // 3. 大組、小組與細項容器內的勾選、新增與管理操作（事件委派）
+      const categoriesContainer = document.getElementById('categories-container');
+
+      // 勾選/取消勾選細項（支援直屬與小組內細項）
+      categoriesContainer.addEventListener('change', (e) => {
+        const target = e.target;
+        if (target.dataset.action === 'toggle-item') {
+          const { catId, subId, itemId } = target.dataset;
+          const cat = state.categories.find(c => c.id === catId);
+          if (!cat) return;
+
+          const itemList = subId
+            ? cat.subgroups.find(s => s.id === subId)?.items
+            : cat.items;
+          const item = itemList?.find(i => i.id === itemId);
+
+          if (item) {
+            item.checked = target.checked;
+            saveState(false);
+            render();
+          }
+        }
+      });
+
+      // 快速新增細項表單送出（支援大組直屬與小組）
+      categoriesContainer.addEventListener('submit', (e) => {
+        const form = e.target;
+        if (form.dataset.action === 'add-item-form') {
+          e.preventDefault();
+          const { catId, subId } = form.dataset;
+          const cat = state.categories.find(c => c.id === catId);
+          if (!cat) return;
+
+          const targetList = subId
+            ? cat.subgroups.find(s => s.id === subId)?.items
+            : cat.items;
+          if (!targetList) return;
+
+          const name = form.elements.itemName.value.trim();
+          const qty = Math.max(1, parseInt(form.elements.itemQty.value, 10) || 1);
+          const weight = form.elements.itemWeight
+            ? Math.max(0, parseInt(form.elements.itemWeight.value, 10) || 0)
+            : 0;
+
+          if (!name) return;
+
+          targetList.push({
+            id: uid('item'),
+            name,
+            checked: false,
+            qty,
+            weight,
+            note: ''
+          });
+
+          saveState(true, `已新增「${name}」`);
+          render();
+        }
+      });
+
+      // 點擊操作委派
+      categoriesContainer.addEventListener('click', async (e) => {
+        const actionEl = e.target.closest('[data-action]');
+        if (!actionEl) return;
+
+        const action = actionEl.dataset.action;
+        const { catId, subId, itemId } = actionEl.dataset;
+        const catIndex = state.categories.findIndex(c => c.id === catId);
+        const cat = state.categories[catIndex];
+        if (!cat) return;
+
+        // 收合/展開大組
+        if (action === 'toggle-collapse') {
+          cat.collapsed = !cat.collapsed;
+          saveState(false);
+          render();
+          return;
+        }
+
+        // 收合/展開小組
+        if (action === 'toggle-sub-collapse') {
+          const sub = cat.subgroups.find(s => s.id === subId);
+          if (sub) {
+            sub.collapsed = !sub.collapsed;
+            saveState(false);
+            render();
+          }
+          return;
+        }
+
+        // 在大組內新增小組
+        if (action === 'add-subgroup') {
+          const res = await openModal({
+            title: `在「${cat.name}」下新增小組`,
+            message: '建立小組可將同類裝備進一步分層（例如：行進層、保暖層、防水收納袋）。',
+            mode: 'input-simple',
+            defaultName: '',
+            confirmText: '建立小組'
+          });
+          if (res && res.name) {
+            cat.collapsed = false;
+            cat.subgroups.push({
+              id: uid('sub'),
+              name: res.name,
+              collapsed: false,
+              items: []
+            });
+            saveState(true, `已新增小組「${res.name}」`);
+            render();
+          }
+          return;
+        }
+
+        // 編輯大組名稱
+        if (action === 'edit-category') {
+          const res = await openModal({
+            title: '編輯大組名稱',
+            mode: 'input-simple',
+            defaultName: cat.name,
+            confirmText: '儲存'
+          });
+          if (res && res.name) {
+            cat.name = res.name;
+            saveState(true, '已更新大組名稱');
+            render();
+          }
+          return;
+        }
+
+        // 刪除大組
+        if (action === 'delete-category') {
+          const totalItems = cat.items.length + cat.subgroups.reduce((acc, s) => acc + s.items.length, 0);
+          const confirmed = await openModal({
+            title: `刪除大組「${cat.name}」？`,
+            message: `此操作將連同裡面的 ${cat.subgroups.length} 個小組與共 ${totalItems} 個細項一併移除，無法復原。`,
+            mode: 'confirm',
+            confirmText: '確認刪除',
+            confirmClass: 'bg-rose-600 hover:bg-rose-500 text-white'
+          });
+          if (confirmed) {
+            state.categories.splice(catIndex, 1);
+            saveState(true, `已刪除「${cat.name}」`);
+            render();
+          }
+          return;
+        }
+
+        // 大組排序上移/下移
+        if (action === 'move-cat-up' && catIndex > 0) {
+          [state.categories[catIndex - 1], state.categories[catIndex]] = [state.categories[catIndex], state.categories[catIndex - 1]];
+          saveState(false);
+          render();
+          return;
+        }
+        if (action === 'move-cat-down' && catIndex < state.categories.length - 1) {
+          [state.categories[catIndex + 1], state.categories[catIndex]] = [state.categories[catIndex], state.categories[catIndex + 1]];
+          saveState(false);
+          render();
+          return;
+        }
+
+        // 小組排序上移/下移
+        if (action === 'move-sub-up' || action === 'move-sub-down') {
+          const subIdx = cat.subgroups.findIndex(s => s.id === subId);
+          if (action === 'move-sub-up' && subIdx > 0) {
+            [cat.subgroups[subIdx - 1], cat.subgroups[subIdx]] = [cat.subgroups[subIdx], cat.subgroups[subIdx - 1]];
+            saveState(false);
+            render();
+          } else if (action === 'move-sub-down' && subIdx !== -1 && subIdx < cat.subgroups.length - 1) {
+            [cat.subgroups[subIdx + 1], cat.subgroups[subIdx]] = [cat.subgroups[subIdx], cat.subgroups[subIdx + 1]];
+            saveState(false);
+            render();
+          }
+          return;
+        }
+
+        // 編輯小組名稱
+        if (action === 'edit-subgroup') {
+          const sub = cat.subgroups.find(s => s.id === subId);
+          if (!sub) return;
+          const res = await openModal({
+            title: '編輯小組名稱',
+            mode: 'input-simple',
+            defaultName: sub.name,
+            confirmText: '儲存'
+          });
+          if (res && res.name) {
+            sub.name = res.name;
+            saveState(true, '已更新小組名稱');
+            render();
+          }
+          return;
+        }
+
+        // 刪除小組（支援選擇將細項移回大組直屬，或連同細項刪除）
+        if (action === 'delete-subgroup') {
+          const subIdx = cat.subgroups.findIndex(s => s.id === subId);
+          if (subIdx === -1) return;
+          const sub = cat.subgroups[subIdx];
+
+          if (sub.items.length === 0) {
+            const confirmed = await openModal({
+              title: `刪除空小組「${sub.name}」？`,
+              message: '此小組目前沒有任何細項。',
+              mode: 'confirm',
+              confirmText: '確認刪除',
+              confirmClass: 'bg-rose-600 hover:bg-rose-500 text-white'
+            });
+            if (confirmed) {
+              cat.subgroups.splice(subIdx, 1);
+              saveState(true, `已刪除小組「${sub.name}」`);
+              render();
+            }
+          } else {
+            const choice = await openModal({
+              title: `刪除小組「${sub.name}」`,
+              message: `此小組內還有 ${sub.items.length} 個細項，請選擇要如何處理這些細項：`,
+              mode: 'delete-subgroup'
+            });
+            if (choice === 'move') {
+              cat.items.push(...sub.items);
+              cat.subgroups.splice(subIdx, 1);
+              saveState(true, `已刪除小組，細項已移回「${cat.name}」直屬`);
+              render();
+            } else if (choice === 'purge') {
+              cat.subgroups.splice(subIdx, 1);
+              saveState(true, `已刪除小組「${sub.name}」及內部細項`);
+              render();
+            }
+          }
+          return;
+        }
+
+        // 編輯細項（支援修改名稱、數量、克數、備註，以及移動到不同小組或移回大組直屬）
+        if (action === 'edit-item') {
+          const sourceList = subId
+            ? cat.subgroups.find(s => s.id === subId)?.items
+            : cat.items;
+          const itemIdx = sourceList?.findIndex(i => i.id === itemId);
+          if (itemIdx === undefined || itemIdx === -1) return;
+          const item = sourceList[itemIdx];
+
+          const locationOptions = [
+            { value: 'direct', label: `直屬大組（${cat.name}）` },
+            ...cat.subgroups.map(s => ({ value: s.id, label: `小組：${s.name}` }))
+          ];
+
+          const res = await openModal({
+            title: '編輯細項內容',
+            mode: 'edit-item',
+            defaultName: item.name,
+            defaultQty: item.qty || 1,
+            defaultWeight: item.weight || 0,
+            defaultNote: item.note || '',
+            locationOptions,
+            defaultLocation: subId || 'direct',
+            confirmText: '儲存變更'
+          });
+
+          if (res && res.name) {
+            item.name = res.name;
+            item.qty = res.qty;
+            item.weight = res.weight;
+            item.note = res.note;
+
+            const currentLoc = subId || 'direct';
+            if (res.location !== currentLoc) {
+              // 從原位置移除並移動到目標位置
+              sourceList.splice(itemIdx, 1);
+              if (res.location === 'direct') {
+                cat.items.push(item);
+              } else {
+                const targetSub = cat.subgroups.find(s => s.id === res.location);
+                if (targetSub) {
+                  targetSub.collapsed = false;
+                  targetSub.items.push(item);
+                } else {
+                  cat.items.push(item);
+                }
+              }
+            }
+
+            saveState(true, '已更新細項');
+            render();
+          }
+          return;
+        }
+
+        // 刪除細項
+        if (action === 'delete-item') {
+          const targetList = subId
+            ? cat.subgroups.find(s => s.id === subId)?.items
+            : cat.items;
+          const itemIdx = targetList?.findIndex(i => i.id === itemId);
+          if (itemIdx !== undefined && itemIdx !== -1) {
+            const removed = targetList.splice(itemIdx, 1)[0];
+            saveState(true, `已移除「${removed.name}」`);
+            render();
+          }
+        }
+      });
+
+      // 4. 篩選切換按鈕
+      document.getElementById('filter-all-btn').addEventListener('click', () => {
+        state.filter = 'all';
+        render();
+      });
+      document.getElementById('filter-unchecked-btn').addEventListener('click', () => {
+        state.filter = 'unchecked';
+        render();
+      });
+
+      // 5. 管理架構（編輯模式）切換
+      document.getElementById('toggle-edit-mode-btn').addEventListener('click', () => {
+        state.editMode = !state.editMode;
+        render();
+      });
+
+      // 6. 清空打勾（保留所有大組、小組與細項，供下次旅行重複使用）
+      document.getElementById('reset-checks-btn').addEventListener('click', async () => {
+        const stats = calculateStats();
+        if (stats.checked === 0) {
+          showToast('目前沒有已打勾的項目');
+          return;
+        }
+
+        const confirmed = await openModal({
+          title: '清空所有打勾狀態？',
+          message: `將取消勾選全部 ${stats.checked} 個已完成項目，所有「大組」、「小組」與「細項內容」都會完整保留，方便下次出發重複使用。`,
+          mode: 'confirm',
+          confirmText: '清空打勾',
+          confirmClass: 'bg-amber-600 hover:bg-amber-500 text-white'
+        });
+
+        if (confirmed) {
+          state.categories.forEach(cat => {
+            cat.items.forEach(item => { item.checked = false; });
+            cat.subgroups.forEach(sub => {
+              sub.items.forEach(item => { item.checked = false; });
+            });
+          });
+          saveState(true, '已清空所有勾選，三層架構完整保留');
+          render();
+        }
+      });
+
+      // 7. 更多選單（匯出 / 匯入 / 載入範本）
+      const moreBtn = document.getElementById('more-menu-btn');
+      const moreDropdown = document.getElementById('more-menu-dropdown');
+
+      moreBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        moreDropdown.classList.toggle('hidden');
+      });
+
+      document.addEventListener('click', () => {
+        moreDropdown.classList.add('hidden');
+      });
+
+      // 匯出 JSON
+      document.getElementById('export-json-btn').addEventListener('click', () => {
+        const dataStr = JSON.stringify({
+          version: 2,
+          title: state.title,
+          categories: state.categories,
+          exportedAt: new Date().toISOString()
+        }, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const dateTag = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = `don-quijote-packing-${dateTag}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('已匯出 JSON 備份檔');
+      });
+
+      // 匯入 JSON
+      const fileInput = document.getElementById('import-file-input');
+      document.getElementById('import-json-btn').addEventListener('click', () => {
+        fileInput.click();
+      });
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+          try {
+            const parsed = JSON.parse(evt.target.result);
+            if (!parsed || !Array.isArray(parsed.categories)) {
+              throw new Error('格式不符');
+            }
+            const confirmed = await openModal({
+              title: '匯入備份檔案？',
+              message: `即將載入「${parsed.title || '匯入清單'}」（共 ${parsed.categories.length} 個大組），這會覆蓋目前的清單內容。`,
+              mode: 'confirm',
+              confirmText: '確認匯入'
+            });
+            if (confirmed) {
+              state.title = parsed.title || '行李檢查表';
+              state.categories = normalizeCategories(parsed.categories);
+              saveState(true, '已成功匯入清單');
+              render();
+            }
+          } catch (err) {
+            showToast('匯入失敗：無效的 JSON 檔案格式');
+          } finally {
+            fileInput.value = '';
+          }
+        };
+        reader.readAsText(file);
+      });
+
+      // 載入預設旅行範本
+      async function handleLoadTemplate() {
+        const confirmed = await openModal({
+          title: '載入預設旅行範本？',
+          message: '這將會用包含「有設小組」與「無小組直屬細項」的預設旅行範本覆蓋目前的清單內容。',
+          mode: 'confirm',
+          confirmText: '載入範本'
+        });
+        if (confirmed) {
+          state.title = DEFAULT_TEMPLATE.title;
+          state.categories = normalizeCategories(JSON.parse(JSON.stringify(DEFAULT_TEMPLATE.categories)));
+          saveState(true, '已載入預設旅行範本');
+          render();
+        }
+      }
+
+      document.getElementById('load-template-btn').addEventListener('click', handleLoadTemplate);
+      document.getElementById('empty-load-template-btn').addEventListener('click', handleLoadTemplate);
+
+      // 初始化啟動
+      loadState();
+      render();
+    })();
+  </script>
+</body>
+</html>
