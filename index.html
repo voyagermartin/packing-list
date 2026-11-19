@@ -16,6 +16,7 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -98,6 +99,22 @@
     .scale-checkbox {
       width: var(--checkbox-size);
       height: var(--checkbox-size);
+    }
+
+    /* 觸控拖曳手把與 SortableJS 拖曳視覺回饋 */
+    .drag-handle {
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .sortable-ghost {
+      opacity: 0.4;
+      background-color: rgba(16, 185, 129, 0.12) !important;
+      border-style: dashed !important;
+      border-color: #10b981 !important;
+    }
+    .sortable-chosen {
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.18);
     }
   </style>
 </head>
@@ -891,18 +908,21 @@
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#039;');
+          .replace(/'/g, '&#39;');
       }
 
+      // 格式化克數顯示（未滿 1000g 顯示 g，達 1000g 或總計模式顯示 kg）
       function formatWeight(grams, forceKg = false) {
-        if (!grams || grams <= 0) return forceKg ? '0 kg' : '';
-        if (forceKg || grams >= 1000) {
-          return `${(grams / 1000).toFixed(2).replace(/\.?0+$/, '')} kg`;
+        const g = Number(grams) || 0;
+        if (g <= 0) return forceKg ? '0 kg' : '';
+        if (forceKg || g >= 1000) {
+          const kg = (g / 1000).toFixed(2).replace(/\.?0+$/, '');
+          return `${kg} kg`;
         }
-        return `${grams} g`;
+        return `${g}g`;
       }
 
-      // 渲染單一細項列（套用三級字級變數，勾選與按鈕清晰好按）
+      // 渲染單一細項列（左側加入專屬拖曳手把，手機滑動不誤觸）
       function renderItemRow(catId, subId, item) {
         const subAttr = subId ? `data-sub-id="${subId}"` : '';
         const qtyBadge = item.qty > 1
@@ -917,26 +937,37 @@
           : '';
 
         return `
-          <li class="group flex items-start justify-between gap-2 py-2.5 px-2 rounded-xl hover:bg-slate-100/80 dark:hover:bg-slate-800/70 transition-colors border-b border-slate-100/70 dark:border-slate-800/50 last:border-none">
-            <label class="flex items-start gap-3 flex-1 min-w-0 cursor-pointer select-none pt-0.5">
-              <input
-                type="checkbox"
-                data-action="toggle-item"
-                data-cat-id="${catId}"
-                ${subAttr}
-                data-item-id="${item.id}"
-                ${item.checked ? 'checked' : ''}
-                class="scale-checkbox mt-0.5 rounded-md border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500/40 bg-white dark:bg-slate-800 cursor-pointer shrink-0 accent-emerald-600"
-              />
-              <div class="flex flex-wrap items-center gap-x-2 gap-y-1 flex-1 min-w-0">
-                <span class="scale-item-text break-words transition-all ${item.checked ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-slate-100 font-medium'}">
-                  ${escapeHtml(item.name)}
-                </span>
-                ${qtyBadge}
-                ${weightBadge}
-                ${noteTag}
-              </div>
-            </label>
+          <li data-item-id="${item.id}" class="group flex items-start justify-between gap-1.5 py-2.5 px-1.5 rounded-xl bg-white/60 dark:bg-slate-900/40 hover:bg-slate-100/90 dark:hover:bg-slate-800/80 transition-colors border-b border-slate-100/80 dark:border-slate-800/60 last:border-none">
+            <div class="flex items-start gap-2 flex-1 min-w-0">
+              <!-- 細項專屬拖曳手把 -->
+              <span
+                class="drag-handle mt-1 p-1 rounded-lg text-slate-300 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-300 cursor-grab active:cursor-grabbing shrink-0"
+                title="按住上下拖曳調整細項順序"
+                aria-label="拖曳調整細項順序"
+              >
+                <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+              </span>
+
+              <label class="flex items-start gap-2.5 flex-1 min-w-0 cursor-pointer select-none pt-0.5">
+                <input
+                  type="checkbox"
+                  data-action="toggle-item"
+                  data-cat-id="${catId}"
+                  ${subAttr}
+                  data-item-id="${item.id}"
+                  ${item.checked ? 'checked' : ''}
+                  class="scale-checkbox mt-0.5 rounded-md border-slate-300 dark:border-slate-600 text-emerald-600 focus:ring-emerald-500/40 bg-white dark:bg-slate-800 cursor-pointer shrink-0 accent-emerald-600"
+                />
+                <div class="flex flex-wrap items-center gap-x-2 gap-y-1 flex-1 min-w-0">
+                  <span class="scale-item-text break-words transition-all ${item.checked ? 'line-through text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-slate-100 font-medium'}">
+                    ${escapeHtml(item.name)}
+                  </span>
+                  ${qtyBadge}
+                  ${weightBadge}
+                  ${noteTag}
+                </div>
+              </label>
+            </div>
 
             <div class="flex items-center gap-1 shrink-0">
               <button
@@ -1078,25 +1109,30 @@
             : cat.items;
 
           const hasSubgroups = cat.subgroups.length > 0;
-          const showDirectSection = !hasSubgroups || cat.items.length > 0 || state.editMode;
 
           const directItemsHtml = visibleDirectItems.length > 0
-            ? `<ul class="space-y-0.5">${visibleDirectItems.map(item => renderItemRow(cat.id, null, item)).join('')}</ul>`
-            : (cat.items.length === 0 && !hasSubgroups
-                ? `<p class="scale-badge-text text-slate-400 dark:text-slate-500 text-center py-3">尚無細項，可直接在下方新增，或點「+ 小組」建立分層</p>`
-                : '');
+            ? `<ul class="sortable-items space-y-0.5" data-cat-id="${cat.id}" data-sub-id="">${visibleDirectItems.map(item => renderItemRow(cat.id, null, item)).join('')}</ul>`
+            : `<ul class="sortable-items min-h-[4px]" data-cat-id="${cat.id}" data-sub-id=""></ul>`;
 
-          const directSectionHtml = showDirectSection ? `
-            <div class="${hasSubgroups ? 'pb-3.5 mb-3.5 border-b border-dashed border-slate-200 dark:border-slate-800' : ''}">
-              ${hasSubgroups && (cat.items.length > 0 || state.editMode)
-                ? `<div class="flex items-center justify-between px-2 mb-1">
-                     <span class="scale-badge-text font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">直屬細項（未分小組）</span>
+          // 無論大組底下是否已有小組或直屬細項，大組底部永遠常駐顯示「直屬細項區與新增輸入列」
+          const directSectionHtml = `
+            <div class="${hasSubgroups ? 'pt-3.5 mt-3.5 border-t border-dashed border-slate-200 dark:border-slate-800' : ''}">
+              ${hasSubgroups
+                ? `<div class="flex items-center justify-between px-1 mb-1.5">
+                     <span class="scale-badge-text font-semibold tracking-wide text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                       <i data-lucide="list" class="w-3.5 h-3.5 text-slate-400"></i>
+                       <span>未分小組（直屬細項）</span>
+                     </span>
+                     <span class="scale-badge-text text-slate-400 dark:text-slate-500">${cat.items.length} 項</span>
                    </div>`
-                : ''}
+                : (cat.items.length === 0
+                    ? `<p class="scale-badge-text text-slate-400 dark:text-slate-500 text-center py-2">尚無細項，可直接在下方新增，或點右上「+ 小組」建立分層</p>`
+                    : '')
+              }
               ${directItemsHtml}
-              ${renderQuickAddForm(cat.id, null, hasSubgroups ? '新增直屬細項...' : '新增細項...')}
+              ${renderQuickAddForm(cat.id, null, hasSubgroups ? '＋ 新增未分小組直屬細項...' : '＋ 新增細項...')}
             </div>
-          ` : '';
+          `;
 
           const subgroupsHtml = cat.subgroups.map((sub, subIndex) => {
             const sTotal = sub.items.length;
@@ -1112,10 +1148,17 @@
               : sub.items;
 
             return `
-              <div class="rounded-xl bg-slate-50/95 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/70 border-l-4 ${isSubComplete ? 'border-l-emerald-500' : 'border-l-amber-500'} p-3 transition-all">
-                <!-- 小組標題列 -->
-                <div class="flex items-center justify-between gap-2 mb-2">
-                  <div class="flex items-center gap-1.5 min-w-0">
+              <div data-sub-id="${sub.id}" class="rounded-xl bg-slate-50/95 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/70 border-l-4 ${isSubComplete ? 'border-l-emerald-500' : 'border-l-amber-500'} p-3 transition-all">
+                <!-- 小組標題列（含小組拖曳手把） -->
+                <div class="flex items-center justify-between gap-1.5 mb-2">
+                  <div class="flex items-center gap-1 min-w-0">
+                    <span
+                      class="drag-handle p-1 rounded-lg text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 cursor-grab active:cursor-grabbing shrink-0"
+                      title="按住上下拖曳調整小組順序"
+                      aria-label="拖曳調整小組順序"
+                    >
+                      <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+                    </span>
                     <button
                       type="button"
                       data-action="toggle-sub-collapse"
@@ -1192,21 +1235,31 @@
 
                 <!-- 小組內的細項列表 -->
                 <div class="${sub.collapsed ? 'hidden' : 'block'}">
-                  ${visibleSubItems.length > 0
-                    ? `<ul class="space-y-0.5 mb-1">${visibleSubItems.map(item => renderItemRow(cat.id, sub.id, item)).join('')}</ul>`
-                    : `<p class="scale-badge-text text-slate-400 dark:text-slate-500 text-center py-2">${sTotal === 0 ? '此小組尚無細項' : '此小組項目已全數完成！'}</p>`
+                  <ul class="sortable-items space-y-0.5 mb-1 ${visibleSubItems.length === 0 ? 'min-h-[4px]' : ''}" data-cat-id="${cat.id}" data-sub-id="${sub.id}">
+                    ${visibleSubItems.map(item => renderItemRow(cat.id, sub.id, item)).join('')}
+                  </ul>
+                  ${visibleSubItems.length === 0
+                    ? `<p class="scale-badge-text text-slate-400 dark:text-slate-500 text-center py-1.5">${sTotal === 0 ? '此小組尚無細項' : '此小組項目已全數完成！'}</p>`
+                    : ''
                   }
-                  ${renderQuickAddForm(cat.id, sub.id, `新增「${sub.name}」細項...`)}
+                  ${renderQuickAddForm(cat.id, sub.id, `＋ 新增「${sub.name}」細項...`)}
                 </div>
               </div>
             `;
           }).join('');
 
           return `
-            <section class="bg-white dark:bg-slate-900 border ${isCatComplete ? 'border-emerald-300 dark:border-emerald-900/70' : 'border-slate-200/90 dark:border-slate-800'} rounded-2xl shadow-2xs overflow-hidden transition-all">
-              <!-- 大組標題列 -->
-              <div class="px-3.5 py-3 bg-slate-50/95 dark:bg-slate-800/70 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-                <div class="flex items-center gap-2 min-w-0">
+            <section data-cat-id="${cat.id}" class="bg-white dark:bg-slate-900 border ${isCatComplete ? 'border-emerald-300 dark:border-emerald-900/70' : 'border-slate-200/90 dark:border-slate-800'} rounded-2xl shadow-2xs overflow-hidden transition-all">
+              <!-- 大組標題列（含大組拖曳手把） -->
+              <div class="px-3 py-3 bg-slate-50/95 dark:bg-slate-800/70 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-1.5">
+                <div class="flex items-center gap-1 min-w-0">
+                  <span
+                    class="drag-handle p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 cursor-grab active:cursor-grabbing shrink-0"
+                    title="按住拖曳調整大組順序"
+                    aria-label="拖曳調整大組順序"
+                  >
+                    <i data-lucide="grip-vertical" class="w-4 h-4"></i>
+                  </span>
                   <button
                     type="button"
                     data-action="toggle-collapse"
@@ -1289,10 +1342,10 @@
                 </div>
               </div>
 
-              <!-- 大組內容區 -->
+              <!-- 大組內容區：先顯示各小組，底部永遠常駐直屬細項與新增輸入列 -->
               <div class="${cat.collapsed ? 'hidden' : 'block'} p-3.5">
+                ${hasSubgroups ? `<div class="sortable-subgroups space-y-3" data-cat-id="${cat.id}">${subgroupsHtml}</div>` : ''}
                 ${directSectionHtml}
-                ${hasSubgroups ? `<div class="space-y-3">${subgroupsHtml}</div>` : ''}
               </div>
             </section>
           `;
@@ -1310,464 +1363,593 @@
         if (window.lucide) {
           lucide.createIcons();
         }
+
+        // 初始化三層級觸控拖曳排序
+        initSortableInstances();
       }
 
-      // ================= 事件綁定 =================
-
-      document.querySelectorAll('.font-size-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          applyFontSize(btn.dataset.fontSize, true);
+      // 儲存目前的 Sortable 實例並在每次重新渲染前銷毀重建
+      let sortableInstances = [];
+      function destroySortableInstances() {
+        sortableInstances.forEach(inst => {
+          try { inst.destroy(); } catch (e) {}
         });
-      });
+        sortableInstances = [];
+      }
 
-      document.getElementById('add-category-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const input = document.getElementById('new-category-input');
-        const name = input.value.trim();
-        if (!name) return;
+      function initSortableInstances() {
+        destroySortableInstances();
+        if (typeof Sortable === 'undefined') return;
 
-        state.categories.push({
-          id: uid('cat'),
-          name,
-          collapsed: false,
-          items: [],
-          subgroups: []
-        });
-        input.value = '';
-        saveState(true, `已新增大組「${name}」`);
-        render();
-      });
-
-      document.getElementById('list-title').addEventListener('click', async () => {
-        const res = await openModal({
-          title: '修改檢查表標題',
-          mode: 'input-simple',
-          defaultName: state.title,
-          confirmText: '儲存名稱'
-        });
-        if (res && res.name) {
-          state.title = res.name;
-          saveState(true, '已更新清單標題');
-          render();
+        // 1. 大組層級拖曳排序
+        const catContainer = document.getElementById('categories-container');
+        if (catContainer) {
+          sortableInstances.push(new Sortable(catContainer, {
+            animation: 150,
+            handle: '> div > .flex > .drag-handle',
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            onEnd: () => {
+              const orderedIds = Array.from(catContainer.children)
+                .map(el => el.dataset.catId)
+                .filter(Boolean);
+              if (orderedIds.length === 0) return;
+              const map = new Map(state.categories.map(c => [c.id, c]));
+              const reordered = orderedIds.map(id => map.get(id)).filter(Boolean);
+              state.categories.forEach(c => {
+                if (!orderedIds.includes(c.id)) reordered.push(c);
+              });
+              state.categories = reordered;
+              saveState(true, '已更新大組順序');
+              render();
+            }
+          }));
         }
-      });
 
-      const categoriesContainer = document.getElementById('categories-container');
+        // 2. 小組層級拖曳排序（各自大組內）
+        document.querySelectorAll('.sortable-subgroups').forEach(subListEl => {
+          const catId = subListEl.dataset.catId;
+          sortableInstances.push(new Sortable(subListEl, {
+            animation: 150,
+            handle: '> div > .flex > .drag-handle',
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            onEnd: () => {
+              const cat = state.categories.find(c => c.id === catId);
+              if (!cat) return;
+              const orderedSubIds = Array.from(subListEl.children)
+                .map(el => el.dataset.subId)
+                .filter(Boolean);
+              const map = new Map(cat.subgroups.map(s => [s.id, s]));
+              const reordered = orderedSubIds.map(id => map.get(id)).filter(Boolean);
+              cat.subgroups.forEach(s => {
+                if (!orderedSubIds.includes(s.id)) reordered.push(s);
+              });
+              cat.subgroups = reordered;
+              saveState(true, '已更新小組順序');
+              render();
+            }
+          }));
+        });
 
-      categoriesContainer.addEventListener('change', (e) => {
-        const target = e.target;
-        if (target.dataset.action === 'toggle-item') {
+        // 3. 細項層級拖曳排序（支援同容器排序，以及同一大組內跨小組/直屬區拖曳移動）
+        document.querySelectorAll('.sortable-items').forEach(itemListEl => {
+          const catId = itemListEl.dataset.catId;
+          sortableInstances.push(new Sortable(itemListEl, {
+            group: `items-group-${catId}`,
+            animation: 150,
+            handle: '.drag-handle',
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            onEnd: (evt) => {
+              const cat = state.categories.find(c => c.id === catId);
+              if (!cat) return;
+
+              const fromSubId = evt.from.dataset.subId || null;
+              const toSubId = evt.to.dataset.subId || null;
+              const movedItemId = evt.item.dataset.itemId;
+              if (!movedItemId) return;
+
+              const sourceList = fromSubId
+                ? cat.subgroups.find(s => s.id === fromSubId)?.items
+                : cat.items;
+              const targetList = toSubId
+                ? cat.subgroups.find(s => s.id === toSubId)?.items
+                : cat.items;
+              if (!sourceList || !targetList) return;
+
+              // 從來源陣列取出該細項
+              const srcIndex = sourceList.findIndex(i => i.id === movedItemId);
+              if (srcIndex === -1) return;
+              const [movedItem] = sourceList.splice(srcIndex, 1);
+
+              // 依據目標 DOM 列表的最新順序重建目標陣列（相容「只看未完成」篩選模式）
+              const domOrderedIds = Array.from(evt.to.children)
+                .map(el => el.dataset.itemId)
+                .filter(Boolean);
+
+              const pool = new Map(targetList.map(i => [i.id, i]));
+              pool.set(movedItem.id, movedItem);
+
+              const newTargetList = [];
+              domOrderedIds.forEach(id => {
+                if (pool.has(id)) {
+                  newTargetList.push(pool.get(id));
+                  pool.delete(id);
+                }
+              });
+              // 將篩選模式下隱藏的已打勾項目接回尾端
+              pool.forEach(remainingItem => newTargetList.push(remainingItem));
+
+              if (toSubId) {
+                const targetSub = cat.subgroups.find(s => s.id === toSubId);
+                if (targetSub) targetSub.items = newTargetList;
+              } else {
+                cat.items = newTargetList;
+              }
+
+              saveState(true, fromSubId !== toSubId ? '已移動細項位置' : '已更新細項順序');
+              render();
+            }
+          }));
+        });
+      }
+
+      // 綁定所有使用者互動事件（委派點擊、勾選、表單送出與快捷功能）
+      function bindEvents() {
+        // 1. 三級字體大小切換
+        document.querySelectorAll('.font-size-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            applyFontSize(btn.dataset.fontSize, true);
+          });
+        });
+
+        // 2. 點擊標題修改清單名稱
+        const titleEl = document.getElementById('list-title');
+        titleEl.addEventListener('click', async () => {
+          const res = await openModal({
+            title: '修改檢查表標題',
+            mode: 'input-simple',
+            defaultName: state.title,
+            confirmText: '儲存'
+          });
+          if (res && res.name) {
+            state.title = res.name;
+            saveState(true, '已更新標題');
+            render();
+          }
+        });
+
+        // 3. 篩選切換（全部 / 只看未完成）
+        document.getElementById('filter-all-btn').addEventListener('click', () => {
+          state.filter = 'all';
+          render();
+        });
+        document.getElementById('filter-unchecked-btn').addEventListener('click', () => {
+          state.filter = 'unchecked';
+          render();
+        });
+
+        // 4. 管理架構模式切換
+        document.getElementById('toggle-edit-mode-btn').addEventListener('click', () => {
+          state.editMode = !state.editMode;
+          render();
+        });
+
+        // 5. 清空所有打勾（保留大組、小組與細項架構）
+        document.getElementById('reset-checks-btn').addEventListener('click', async () => {
+          const stats = calculateStats();
+          if (stats.checked === 0) {
+            showToast('目前沒有已打勾的項目');
+            return;
+          }
+          const ok = await openModal({
+            title: '清空所有打勾？',
+            message: `確定要取消全部 ${stats.checked} 個已勾選項目嗎？所有大組、小組與細項清單都會完整保留供下次使用。`,
+            confirmText: '清空打勾',
+            confirmClass: 'bg-amber-600 hover:bg-amber-500 text-white'
+          });
+          if (ok) {
+            state.categories.forEach(cat => {
+              cat.items.forEach(i => { i.checked = false; });
+              cat.subgroups.forEach(sub => {
+                sub.items.forEach(i => { i.checked = false; });
+              });
+            });
+            saveState(true, '已清空所有打勾，架構完整保留');
+            render();
+          }
+        });
+
+        // 6. 更多選項下拉選單（匯出 / 匯入 / 載入範本）
+        const moreBtn = document.getElementById('more-menu-btn');
+        const moreDropdown = document.getElementById('more-menu-dropdown');
+        moreBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          moreDropdown.classList.toggle('hidden');
+        });
+        document.addEventListener('click', (e) => {
+          if (!document.getElementById('more-menu-container').contains(e.target)) {
+            moreDropdown.classList.add('hidden');
+          }
+        });
+
+        // 匯出 JSON 備份
+        document.getElementById('export-json-btn').addEventListener('click', () => {
+          moreDropdown.classList.add('hidden');
+          const payload = {
+            version: 2,
+            title: state.title,
+            categories: state.categories,
+            exportedAt: new Date().toISOString()
+          };
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          const dateStr = new Date().toISOString().slice(0, 10);
+          a.href = url;
+          a.download = `packing-checklist-${dateStr}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast('已匯出 JSON 備份檔');
+        });
+
+        // 匯入 JSON 備份
+        const importInput = document.getElementById('import-file-input');
+        document.getElementById('import-json-btn').addEventListener('click', () => {
+          moreDropdown.classList.add('hidden');
+          importInput.value = '';
+          importInput.click();
+        });
+        importInput.addEventListener('change', (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = async (evt) => {
+            try {
+              const parsed = JSON.parse(evt.target.result);
+              if (!parsed || !Array.isArray(parsed.categories)) {
+                throw new Error('格式不符');
+              }
+              const ok = await openModal({
+                title: '確認匯入備份？',
+                message: `即將匯入「${parsed.title || '行李檢查表'}」（共 ${parsed.categories.length} 個大組），這將會覆蓋目前的清單內容。`,
+                confirmText: '確認匯入',
+                confirmClass: 'bg-emerald-600 hover:bg-emerald-500 text-white'
+              });
+              if (ok) {
+                state.title = parsed.title || '行李檢查表';
+                state.categories = normalizeCategories(parsed.categories);
+                saveState(true, '已成功匯入清單備份');
+                render();
+              }
+            } catch (err) {
+              showToast('匯入失敗：JSON 檔案格式錯誤');
+            }
+          };
+          reader.readAsText(file);
+        });
+
+        // 載入預設旅行範本
+        const handleLoadTemplate = async () => {
+          moreDropdown.classList.add('hidden');
+          const ok = await openModal({
+            title: '載入預設旅行範本？',
+            message: '這會將清單重設為預設的旅行範本（包含證件、衣物穿搭小組、電子設備），確定要執行嗎？',
+            confirmText: '載入範本',
+            confirmClass: 'bg-emerald-600 hover:bg-emerald-500 text-white'
+          });
+          if (ok) {
+            state.title = DEFAULT_TEMPLATE.title;
+            state.categories = normalizeCategories(JSON.parse(JSON.stringify(DEFAULT_TEMPLATE.categories)));
+            saveState(true, '已載入預設旅行範本');
+            render();
+          }
+        };
+        document.getElementById('load-template-btn').addEventListener('click', handleLoadTemplate);
+        document.getElementById('empty-load-template-btn').addEventListener('click', handleLoadTemplate);
+
+        // 7. 新增大組表單
+        document.getElementById('add-category-form').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const input = document.getElementById('new-category-input');
+          const name = input.value.trim();
+          if (!name) return;
+          state.categories.push({
+            id: uid('cat'),
+            name,
+            collapsed: false,
+            items: [],
+            subgroups: []
+          });
+          input.value = '';
+          saveState(true, `已新增大組「${name}」`);
+          render();
+        });
+
+        // 8. 清單區事件委派（勾選、新增細項、編輯與刪除大組/小組/細項）
+        const catContainer = document.getElementById('categories-container');
+
+        // 勾選狀態變更
+        catContainer.addEventListener('change', (e) => {
+          const target = e.target;
+          if (target.dataset.action !== 'toggle-item') return;
           const { catId, subId, itemId } = target.dataset;
           const cat = state.categories.find(c => c.id === catId);
           if (!cat) return;
-
-          const itemList = subId
+          const list = subId
             ? cat.subgroups.find(s => s.id === subId)?.items
             : cat.items;
-          const item = itemList?.find(i => i.id === itemId);
-
+          const item = list?.find(i => i.id === itemId);
           if (item) {
             item.checked = target.checked;
             saveState(false);
             render();
           }
-        }
-      });
+        });
 
-      categoriesContainer.addEventListener('submit', (e) => {
-        const form = e.target;
-        if (form.dataset.action === 'add-item-form') {
+        // 快速新增細項表單送出
+        catContainer.addEventListener('submit', (e) => {
+          const form = e.target;
+          if (form.dataset.action !== 'add-item-form') return;
           e.preventDefault();
           const { catId, subId } = form.dataset;
           const cat = state.categories.find(c => c.id === catId);
           if (!cat) return;
 
-          const targetList = subId
-            ? cat.subgroups.find(s => s.id === subId)?.items
-            : cat.items;
-          if (!targetList) return;
+          const nameInput = form.querySelector('input[name="itemName"]');
+          const qtyInput = form.querySelector('input[name="itemQty"]');
+          const weightInput = form.querySelector('input[name="itemWeight"]');
 
-          const name = form.elements.itemName.value.trim();
-          const qty = Math.max(1, parseInt(form.elements.itemQty.value, 10) || 1);
-          const weight = form.elements.itemWeight
-            ? Math.max(0, parseInt(form.elements.itemWeight.value, 10) || 0)
-            : 0;
-
+          const name = nameInput.value.trim();
           if (!name) return;
 
-          targetList.push({
+          const newItem = normalizeItem({
             id: uid('item'),
             name,
             checked: false,
-            qty,
-            weight,
+            qty: parseInt(qtyInput.value, 10) || 1,
+            weight: parseInt(weightInput.value, 10) || 0,
             note: ''
           });
 
+          if (subId) {
+            const sub = cat.subgroups.find(s => s.id === subId);
+            if (sub) sub.items.push(newItem);
+          } else {
+            cat.items.push(newItem);
+          }
+
           saveState(true, `已新增「${name}」`);
           render();
-        }
-      });
+        });
 
-      categoriesContainer.addEventListener('click', async (e) => {
-        const actionEl = e.target.closest('[data-action]');
-        if (!actionEl) return;
+        // 點擊按鈕操作委派
+        catContainer.addEventListener('click', async (e) => {
+          const actionEl = e.target.closest('[data-action]');
+          if (!actionEl) return;
+          const action = actionEl.dataset.action;
+          const { catId, subId, itemId } = actionEl.dataset;
+          const catIndex = state.categories.findIndex(c => c.id === catId);
+          const cat = state.categories[catIndex];
+          if (!cat) return;
 
-        const action = actionEl.dataset.action;
-        const { catId, subId, itemId } = actionEl.dataset;
-        const catIndex = state.categories.findIndex(c => c.id === catId);
-        const cat = state.categories[catIndex];
-        if (!cat) return;
+          // 收合/展開大組
+          if (action === 'toggle-collapse') {
+            cat.collapsed = !cat.collapsed;
+            saveState(false);
+            render();
+            return;
+          }
 
-        if (action === 'toggle-collapse') {
-          cat.collapsed = !cat.collapsed;
-          saveState(false);
-          render();
-          return;
-        }
+          // 編輯大組名稱
+          if (action === 'edit-category') {
+            const res = await openModal({
+              title: '編輯大組名稱',
+              mode: 'input-simple',
+              defaultName: cat.name,
+              confirmText: '儲存'
+            });
+            if (res && res.name) {
+              cat.name = res.name;
+              saveState(true, '已更新大組名稱');
+              render();
+            }
+            return;
+          }
 
-        if (action === 'toggle-sub-collapse') {
-          const sub = cat.subgroups.find(s => s.id === subId);
-          if (sub) {
+          // 刪除大組
+          if (action === 'delete-category') {
+            const totalCount = cat.items.length + cat.subgroups.reduce((acc, s) => acc + s.items.length, 0);
+            const ok = await openModal({
+              title: `刪除大組「${cat.name}」？`,
+              message: totalCount > 0
+                ? `此大組內共有 ${totalCount} 個細項，刪除後將一併移除且無法復原。`
+                : '確定要刪除此空白大組嗎？',
+              confirmText: '刪除大組',
+              confirmClass: 'bg-rose-600 hover:bg-rose-500 text-white'
+            });
+            if (ok) {
+              state.categories.splice(catIndex, 1);
+              saveState(true, `已刪除「${cat.name}」`);
+              render();
+            }
+            return;
+          }
+
+          // 大組上下移動
+          if (action === 'move-cat-up' && catIndex > 0) {
+            [state.categories[catIndex - 1], state.categories[catIndex]] = [state.categories[catIndex], state.categories[catIndex - 1]];
+            saveState(true, '已調整大組順序');
+            render();
+            return;
+          }
+          if (action === 'move-cat-down' && catIndex < state.categories.length - 1) {
+            [state.categories[catIndex + 1], state.categories[catIndex]] = [state.categories[catIndex], state.categories[catIndex + 1]];
+            saveState(true, '已調整大組順序');
+            render();
+            return;
+          }
+
+          // 新建小組
+          if (action === 'add-subgroup') {
+            const res = await openModal({
+              title: `在「${cat.name}」新增小組`,
+              message: '輸入子分類名稱（例如：貼身衣物、充電線材、隨身藥品）：',
+              mode: 'input-simple',
+              defaultName: '',
+              confirmText: '建立小組'
+            });
+            if (res && res.name) {
+              cat.collapsed = false;
+              cat.subgroups.push({
+                id: uid('sub'),
+                name: res.name,
+                collapsed: false,
+                items: []
+              });
+              saveState(true, `已建立小組「${res.name}」`);
+              render();
+            }
+            return;
+          }
+
+          // 小組相關操作
+          const subIndex = subId ? cat.subgroups.findIndex(s => s.id === subId) : -1;
+          const sub = subIndex !== -1 ? cat.subgroups[subIndex] : null;
+
+          if (action === 'toggle-sub-collapse' && sub) {
             sub.collapsed = !sub.collapsed;
             saveState(false);
             render();
+            return;
           }
-          return;
-        }
 
-        if (action === 'add-subgroup') {
-          const res = await openModal({
-            title: `在「${cat.name}」下新增小組`,
-            message: '建立小組可將同類裝備進一步分層（例如：上衣與下著、貼身衣物）。',
-            mode: 'input-simple',
-            defaultName: '',
-            confirmText: '建立小組'
-          });
-          if (res && res.name) {
-            cat.collapsed = false;
-            cat.subgroups.push({
-              id: uid('sub'),
-              name: res.name,
-              collapsed: false,
-              items: []
+          if (action === 'edit-subgroup' && sub) {
+            const res = await openModal({
+              title: '編輯小組名稱',
+              mode: 'input-simple',
+              defaultName: sub.name,
+              confirmText: '儲存'
             });
-            saveState(true, `已新增小組「${res.name}」`);
-            render();
-          }
-          return;
-        }
-
-        if (action === 'edit-category') {
-          const res = await openModal({
-            title: '編輯大組名稱',
-            mode: 'input-simple',
-            defaultName: cat.name,
-            confirmText: '儲存'
-          });
-          if (res && res.name) {
-            cat.name = res.name;
-            saveState(true, '已更新大組名稱');
-            render();
-          }
-          return;
-        }
-
-        if (action === 'delete-category') {
-          const totalItems = cat.items.length + cat.subgroups.reduce((acc, s) => acc + s.items.length, 0);
-          const confirmed = await openModal({
-            title: `刪除大組「${cat.name}」？`,
-            message: `此操作將連同裡面的 ${cat.subgroups.length} 個小組與共 ${totalItems} 個細項一併移除，無法復原。`,
-            mode: 'confirm',
-            confirmText: '確認刪除',
-            confirmClass: 'bg-rose-600 hover:bg-rose-500 text-white'
-          });
-          if (confirmed) {
-            state.categories.splice(catIndex, 1);
-            saveState(true, `已刪除「${cat.name}」`);
-            render();
-          }
-          return;
-        }
-
-        if (action === 'move-cat-up' && catIndex > 0) {
-          [state.categories[catIndex - 1], state.categories[catIndex]] = [state.categories[catIndex], state.categories[catIndex - 1]];
-          saveState(false);
-          render();
-          return;
-        }
-        if (action === 'move-cat-down' && catIndex < state.categories.length - 1) {
-          [state.categories[catIndex + 1], state.categories[catIndex]] = [state.categories[catIndex], state.categories[catIndex + 1]];
-          saveState(false);
-          render();
-          return;
-        }
-
-        if (action === 'move-sub-up' || action === 'move-sub-down') {
-          const subIdx = cat.subgroups.findIndex(s => s.id === subId);
-          if (action === 'move-sub-up' && subIdx > 0) {
-            [cat.subgroups[subIdx - 1], cat.subgroups[subIdx]] = [cat.subgroups[subIdx], cat.subgroups[subIdx - 1]];
-            saveState(false);
-            render();
-          } else if (action === 'move-sub-down' && subIdx !== -1 && subIdx < cat.subgroups.length - 1) {
-            [cat.subgroups[subIdx + 1], cat.subgroups[subIdx]] = [cat.subgroups[subIdx], cat.subgroups[subIdx + 1]];
-            saveState(false);
-            render();
-          }
-          return;
-        }
-
-        if (action === 'edit-subgroup') {
-          const sub = cat.subgroups.find(s => s.id === subId);
-          if (!sub) return;
-          const res = await openModal({
-            title: '編輯小組名稱',
-            mode: 'input-simple',
-            defaultName: sub.name,
-            confirmText: '儲存'
-          });
-          if (res && res.name) {
-            sub.name = res.name;
-            saveState(true, '已更新小組名稱');
-            render();
-          }
-          return;
-        }
-
-        if (action === 'delete-subgroup') {
-          const subIdx = cat.subgroups.findIndex(s => s.id === subId);
-          if (subIdx === -1) return;
-          const sub = cat.subgroups[subIdx];
-
-          if (sub.items.length === 0) {
-            const confirmed = await openModal({
-              title: `刪除空小組「${sub.name}」？`,
-              message: '此小組目前沒有任何細項。',
-              mode: 'confirm',
-              confirmText: '確認刪除',
-              confirmClass: 'bg-rose-600 hover:bg-rose-500 text-white'
-            });
-            if (confirmed) {
-              cat.subgroups.splice(subIdx, 1);
-              saveState(true, `已刪除小組「${sub.name}」`);
+            if (res && res.name) {
+              sub.name = res.name;
+              saveState(true, '已更新小組名稱');
               render();
             }
-          } else {
-            const choice = await openModal({
-              title: `刪除小組「${sub.name}」`,
-              message: `此小組內還有 ${sub.items.length} 個細項，請選擇要如何處理這些細項：`,
-              mode: 'delete-subgroup'
-            });
-            if (choice === 'move') {
-              cat.items.push(...sub.items);
-              cat.subgroups.splice(subIdx, 1);
-              saveState(true, `已刪除小組，細項已移回「${cat.name}」直屬`);
-              render();
-            } else if (choice === 'purge') {
-              cat.subgroups.splice(subIdx, 1);
-              saveState(true, `已刪除小組「${sub.name}」及內部細項`);
-              render();
-            }
+            return;
           }
-          return;
-        }
 
-        if (action === 'edit-item') {
-          const sourceList = subId
-            ? cat.subgroups.find(s => s.id === subId)?.items
-            : cat.items;
-          const itemIdx = sourceList?.findIndex(i => i.id === itemId);
-          if (itemIdx === undefined || itemIdx === -1) return;
-          const item = sourceList[itemIdx];
-
-          const locationOptions = [
-            { value: 'direct', label: `直屬大組（${cat.name}）` },
-            ...cat.subgroups.map(s => ({ value: s.id, label: `小組：${s.name}` }))
-          ];
-
-          const res = await openModal({
-            title: '編輯細項內容',
-            mode: 'edit-item',
-            defaultName: item.name,
-            defaultQty: item.qty || 1,
-            defaultWeight: item.weight || 0,
-            defaultNote: item.note || '',
-            locationOptions,
-            defaultLocation: subId || 'direct',
-            confirmText: '儲存變更'
-          });
-
-          if (res && res.name) {
-            item.name = res.name;
-            item.qty = res.qty;
-            item.weight = res.weight;
-            item.note = res.note;
-
-            const currentLoc = subId || 'direct';
-            if (res.location !== currentLoc) {
-              sourceList.splice(itemIdx, 1);
-              if (res.location === 'direct') {
-                cat.items.push(item);
-              } else {
-                const targetSub = cat.subgroups.find(s => s.id === res.location);
-                if (targetSub) {
-                  targetSub.collapsed = false;
-                  targetSub.items.push(item);
-                } else {
-                  cat.items.push(item);
-                }
+          if (action === 'delete-subgroup' && sub) {
+            if (sub.items.length === 0) {
+              const ok = await openModal({
+                title: `刪除小組「${sub.name}」？`,
+                message: '確定要刪除此空白小組嗎？',
+                confirmText: '刪除小組',
+                confirmClass: 'bg-rose-600 hover:bg-rose-500 text-white'
+              });
+              if (ok) {
+                cat.subgroups.splice(subIndex, 1);
+                saveState(true, `已刪除小組「${sub.name}」`);
+                render();
+              }
+            } else {
+              const choice = await openModal({
+                title: `刪除小組「${sub.name}」`,
+                message: `此小組內還有 ${sub.items.length} 個細項，請選擇處理方式：`,
+                mode: 'delete-subgroup'
+              });
+              if (choice === 'move') {
+                cat.items.push(...sub.items);
+                cat.subgroups.splice(subIndex, 1);
+                saveState(true, `已刪除小組，${sub.items.length} 個細項已移回大組直屬`);
+                render();
+              } else if (choice === 'purge') {
+                cat.subgroups.splice(subIndex, 1);
+                saveState(true, `已連同細項刪除小組「${sub.name}」`);
+                render();
               }
             }
-
-            saveState(true, '已更新細項');
-            render();
+            return;
           }
-          return;
-        }
 
-        if (action === 'delete-item') {
-          const targetList = subId
-            ? cat.subgroups.find(s => s.id === subId)?.items
-            : cat.items;
-          const itemIdx = targetList?.findIndex(i => i.id === itemId);
-          if (itemIdx !== undefined && itemIdx !== -1) {
-            const removed = targetList.splice(itemIdx, 1)[0];
-            saveState(true, `已移除「${removed.name}」`);
+          if (action === 'move-sub-up' && sub && subIndex > 0) {
+            [cat.subgroups[subIndex - 1], cat.subgroups[subIndex]] = [cat.subgroups[subIndex], cat.subgroups[subIndex - 1]];
+            saveState(true, '已調整小組順序');
             render();
+            return;
           }
-        }
-      });
+          if (action === 'move-sub-down' && sub && subIndex < cat.subgroups.length - 1) {
+            [cat.subgroups[subIndex + 1], cat.subgroups[subIndex]] = [cat.subgroups[subIndex], cat.subgroups[subIndex + 1]];
+            saveState(true, '已調整小組順序');
+            render();
+            return;
+          }
 
-      document.getElementById('filter-all-btn').addEventListener('click', () => {
-        state.filter = 'all';
-        render();
-      });
-      document.getElementById('filter-unchecked-btn').addEventListener('click', () => {
-        state.filter = 'unchecked';
-        render();
-      });
+          // 細項編輯與刪除
+          const itemList = sub ? sub.items : cat.items;
+          const itemIndex = itemId ? itemList.findIndex(i => i.id === itemId) : -1;
+          const item = itemIndex !== -1 ? itemList[itemIndex] : null;
 
-      document.getElementById('toggle-edit-mode-btn').addEventListener('click', () => {
-        state.editMode = !state.editMode;
-        render();
-      });
-
-      document.getElementById('reset-checks-btn').addEventListener('click', async () => {
-        const stats = calculateStats();
-        if (stats.checked === 0) {
-          showToast('目前沒有已打勾的項目');
-          return;
-        }
-
-        const confirmed = await openModal({
-          title: '清空所有打勾狀態？',
-          message: `將取消勾選全部 ${stats.checked} 個已完成項目，所有「大組」、「小組」與「細項內容」都會完整保留，方便下次出發重複使用。`,
-          mode: 'confirm',
-          confirmText: '清空打勾',
-          confirmClass: 'bg-amber-600 hover:bg-amber-500 text-white'
-        });
-
-        if (confirmed) {
-          state.categories.forEach(cat => {
-            cat.items.forEach(item => { item.checked = false; });
-            cat.subgroups.forEach(sub => {
-              sub.items.forEach(item => { item.checked = false; });
+          if (action === 'edit-item' && item) {
+            const locationOptions = [
+              { value: 'direct', label: `大組直屬（${cat.name} · 未分小組）` },
+              ...cat.subgroups.map(s => ({
+                value: s.id,
+                label: `小組：${s.name}`
+              }))
+            ];
+            const res = await openModal({
+              title: '編輯細項內容',
+              mode: 'edit-item',
+              defaultName: item.name,
+              defaultQty: item.qty,
+              defaultWeight: item.weight,
+              defaultNote: item.note,
+              locationOptions,
+              defaultLocation: sub ? sub.id : 'direct',
+              confirmText: '儲存變更'
             });
-          });
-          saveState(true, '已清空所有勾選，三層架構完整保留');
-          render();
-        }
-      });
+            if (res && res.name) {
+              item.name = res.name;
+              item.qty = res.qty;
+              item.weight = res.weight;
+              item.note = res.note;
 
-      const moreBtn = document.getElementById('more-menu-btn');
-      const moreDropdown = document.getElementById('more-menu-dropdown');
-
-      moreBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        moreDropdown.classList.toggle('hidden');
-      });
-
-      document.addEventListener('click', () => {
-        moreDropdown.classList.add('hidden');
-      });
-
-      document.getElementById('export-json-btn').addEventListener('click', () => {
-        const dataStr = JSON.stringify({
-          version: 2,
-          title: state.title,
-          categories: state.categories,
-          exportedAt: new Date().toISOString()
-        }, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        const dateTag = new Date().toISOString().slice(0, 10);
-        a.href = url;
-        a.download = `don-quijote-packing-${dateTag}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        showToast('已匯出 JSON 備份檔');
-      });
-
-      const fileInput = document.getElementById('import-file-input');
-      document.getElementById('import-json-btn').addEventListener('click', () => {
-        fileInput.click();
-      });
-
-      fileInput.addEventListener('change', (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = async (evt) => {
-          try {
-            const parsed = JSON.parse(evt.target.result);
-            if (!parsed || !Array.isArray(parsed.categories)) {
-              throw new Error('格式不符');
-            }
-            const confirmed = await openModal({
-              title: '匯入備份檔案？',
-              message: `即將載入「${parsed.title || '匯入清單'}」（共 ${parsed.categories.length} 個大組），這會覆蓋目前的清單內容。`,
-              mode: 'confirm',
-              confirmText: '確認匯入'
-            });
-            if (confirmed) {
-              state.title = parsed.title || '行李檢查表';
-              state.categories = normalizeCategories(parsed.categories);
-              saveState(true, '已成功匯入清單');
+              const currentLoc = sub ? sub.id : 'direct';
+              if (res.location !== currentLoc) {
+                itemList.splice(itemIndex, 1);
+                if (res.location === 'direct') {
+                  cat.items.push(item);
+                } else {
+                  const targetSub = cat.subgroups.find(s => s.id === res.location);
+                  if (targetSub) targetSub.items.push(item);
+                  else cat.items.push(item);
+                }
+              }
+              saveState(true, '已更新細項');
               render();
             }
-          } catch (err) {
-            showToast('匯入失敗：無效的 JSON 檔案格式');
-          } finally {
-            fileInput.value = '';
+            return;
           }
-        };
-        reader.readAsText(file);
-      });
 
-      async function handleLoadTemplate() {
-        const confirmed = await openModal({
-          title: '載入預設旅行範本？',
-          message: '這將會用包含「重要證件與隨身財務」、「衣物穿搭（上衣與下著 / 貼身衣物）」、「電子與充電設備」的預設範本覆蓋目前清單。',
-          mode: 'confirm',
-          confirmText: '載入範本'
+          if (action === 'delete-item' && item) {
+            itemList.splice(itemIndex, 1);
+            saveState(true, `已刪除「${item.name}」`);
+            render();
+          }
         });
-        if (confirmed) {
-          state.title = DEFAULT_TEMPLATE.title;
-          state.categories = normalizeCategories(JSON.parse(JSON.stringify(DEFAULT_TEMPLATE.categories)));
-          saveState(true, '已載入預設旅行範本');
-          render();
-        }
       }
 
-      document.getElementById('load-template-btn').addEventListener('click', handleLoadTemplate);
-      document.getElementById('empty-load-template-btn').addEventListener('click', handleLoadTemplate);
-
-      // 啟動：設定 PWA 圖示與離線快取、載入資料並渲染畫面
-      setupPwaAndIcons();
-      loadState();
-      render();
+      // 啟動應用
+      window.addEventListener('DOMContentLoaded', () => {
+        setupPwaAndIcons();
+        loadState();
+        bindEvents();
+        render();
+      });
     })();
   </script>
 </body>
