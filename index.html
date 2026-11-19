@@ -205,8 +205,8 @@
         </div>
       </div>
 
-      <!-- 第二列：精巧操作功能列（固定 13px 字體與緊湊內距，手機單列不換行） -->
-      <div class="flex flex-wrap items-center justify-between gap-1.5 mb-2.5">
+      <!-- 第二列：精巧操作功能列（只保留篩選、清空打勾與備份選單） -->
+      <div class="flex flex-wrap items-center justify-between gap-1.5">
         <!-- 篩選切換 -->
         <div class="inline-flex rounded-xl bg-slate-100 dark:bg-slate-800 p-0.5 border border-slate-200/60 dark:border-slate-700/60">
           <button type="button" id="filter-all-btn" class="px-2.5 py-1 text-[13px] font-medium rounded-lg transition-all cursor-pointer">
@@ -218,12 +218,6 @@
         </div>
 
         <div class="flex items-center gap-1.5">
-          <!-- 管理架構（排序模式） -->
-          <button type="button" id="toggle-edit-mode-btn" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[13px] font-medium rounded-xl border transition-all cursor-pointer">
-            <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
-            <span id="edit-mode-label">管理架構</span>
-          </button>
-
           <!-- 清空打勾（保留架構） -->
           <button type="button" id="reset-checks-btn" class="inline-flex items-center gap-1 px-2.5 py-1.5 text-[13px] font-medium rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-all cursor-pointer">
             <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
@@ -252,26 +246,6 @@
             </div>
           </div>
           <input type="file" id="import-file-input" accept=".json,application/json" class="hidden" />
-        </div>
-      </div>
-
-      <!-- 第三列：總進度條與重量統計（精巧單列呈現） -->
-      <div>
-        <div class="flex items-center justify-between gap-2 text-[12px] mb-1">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="font-semibold text-slate-700 dark:text-slate-200 shrink-0">
-              進度：<span id="progress-count" class="text-emerald-600 dark:text-emerald-400 font-bold">0 / 0</span>
-            </span>
-            <span id="total-weight-badge" class="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md truncate">
-              重量：<strong id="checked-weight-value" class="font-semibold text-emerald-600 dark:text-emerald-400">0 kg</strong>
-              <span>/</span>
-              <strong id="total-weight-value" class="font-semibold text-slate-700 dark:text-slate-300">0 kg</strong>
-            </span>
-          </div>
-          <span id="progress-percent" class="font-bold text-emerald-600 dark:text-emerald-400 shrink-0">0%</span>
-        </div>
-        <div class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-          <div id="progress-bar-fill" class="h-full bg-emerald-500 rounded-full transition-all duration-300 ease-out" style="width: 0%"></div>
         </div>
       </div>
     </header>
@@ -328,15 +302,9 @@
           <input type="text" id="modal-input-name" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-[16px] focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500" />
         </div>
         <div id="modal-extra-fields" class="space-y-3.5">
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label for="modal-input-qty" class="block text-[13px] font-medium text-slate-600 dark:text-slate-400 mb-1">數量</label>
-              <input type="number" id="modal-input-qty" min="1" placeholder="1" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-[16px] focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500" />
-            </div>
-            <div>
-              <label for="modal-input-weight" class="block text-[13px] font-medium text-slate-600 dark:text-slate-400 mb-1">單件克數 (g)</label>
-              <input type="number" id="modal-input-weight" min="0" placeholder="例如: 250" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-[16px] focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500" />
-            </div>
+          <div>
+            <label for="modal-input-qty" class="block text-[13px] font-medium text-slate-600 dark:text-slate-400 mb-1">數量</label>
+            <input type="number" id="modal-input-qty" min="1" placeholder="1" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-[16px] focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500" />
           </div>
           <div>
             <label for="modal-input-note" class="block text-[13px] font-medium text-slate-600 dark:text-slate-400 mb-1">備註（選填）</label>
@@ -604,8 +572,7 @@
       let state = {
         title: '行李檢查表',
         categories: [],
-        filter: 'all', // 'all' | 'unchecked'
-        editMode: false
+        filter: 'all' // 'all' | 'unchecked'
       };
 
       const uid = (prefix = 'id') => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -757,7 +724,6 @@
         mode = 'confirm',
         defaultName = '',
         defaultQty = 1,
-        defaultWeight = 0,
         defaultNote = '',
         locationOptions = [],
         defaultLocation = 'direct',
@@ -772,7 +738,6 @@
           const extraFields = document.getElementById('modal-extra-fields');
           const nameInput = document.getElementById('modal-input-name');
           const qtyInput = document.getElementById('modal-input-qty');
-          const weightInput = document.getElementById('modal-input-weight');
           const noteInput = document.getElementById('modal-input-note');
           const locationSelect = document.getElementById('modal-input-location');
 
@@ -806,7 +771,6 @@
           }
           if (mode === 'edit-item') {
             qtyInput.value = defaultQty || 1;
-            weightInput.value = defaultWeight > 0 ? defaultWeight : '';
             noteInput.value = defaultNote || '';
             locationSelect.innerHTML = locationOptions
               .map(opt => `<option value="${escapeHtml(opt.value)}" ${opt.value === defaultLocation ? 'selected' : ''}>${escapeHtml(opt.label)}</option>`)
@@ -867,7 +831,6 @@
                 resolve({
                   name: trimmed,
                   qty: Math.max(1, parseInt(qtyInput.value, 10) || 1),
-                  weight: Math.max(0, parseInt(weightInput.value, 10) || 0),
                   note: noteInput.value.trim(),
                   location: locationSelect.value
                 });
@@ -911,26 +874,11 @@
           .replace(/'/g, '&#39;');
       }
 
-      // 格式化克數顯示（未滿 1000g 顯示 g，達 1000g 或總計模式顯示 kg）
-      function formatWeight(grams, forceKg = false) {
-        const g = Number(grams) || 0;
-        if (g <= 0) return forceKg ? '0 kg' : '';
-        if (forceKg || g >= 1000) {
-          const kg = (g / 1000).toFixed(2).replace(/\.?0+$/, '');
-          return `${kg} kg`;
-        }
-        return `${g}g`;
-      }
-
-      // 渲染單一細項列（左側加入專屬拖曳手把，手機滑動不誤觸）
+      // 渲染單一細項列（移除重量標籤，保留拖曳手把、勾選框、數量與備註）
       function renderItemRow(catId, subId, item) {
         const subAttr = subId ? `data-sub-id="${subId}"` : '';
         const qtyBadge = item.qty > 1
           ? `<span class="scale-badge-text font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">×${item.qty}</span>`
-          : '';
-        const weightStr = formatWeight((Number(item.weight) || 0) * (Number(item.qty) || 1));
-        const weightBadge = weightStr
-          ? `<span class="scale-badge-text text-slate-400 dark:text-slate-500 shrink-0">${weightStr}</span>`
           : '';
         const noteTag = item.note
           ? `<span class="scale-badge-text text-amber-700/90 dark:text-amber-300/90 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded-md shrink-0">${escapeHtml(item.note)}</span>`
@@ -941,7 +889,7 @@
             <div class="flex items-start gap-2 flex-1 min-w-0">
               <!-- 細項專屬拖曳手把 -->
               <span
-                class="drag-handle mt-1 p-1 rounded-lg text-slate-300 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-300 cursor-grab active:cursor-grabbing shrink-0"
+                class="drag-handle item-drag-handle mt-1 p-1 rounded-lg text-slate-300 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-300 cursor-grab active:cursor-grabbing shrink-0"
                 title="按住上下拖曳調整細項順序"
                 aria-label="拖曳調整細項順序"
               >
@@ -963,7 +911,6 @@
                     ${escapeHtml(item.name)}
                   </span>
                   ${qtyBadge}
-                  ${weightBadge}
                   ${noteTag}
                 </div>
               </label>
@@ -976,7 +923,7 @@
                 data-cat-id="${catId}"
                 ${subAttr}
                 data-item-id="${item.id}"
-                title="編輯細項（名稱 / 數量 / 重量 / 移動位置）"
+                title="編輯細項（名稱 / 數量 / 備註 / 移動位置）"
                 class="p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 bg-slate-100/80 dark:bg-slate-800/80 hover:bg-emerald-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
               >
                 <i data-lucide="pencil" class="w-4 h-4"></i>
@@ -997,7 +944,7 @@
         `;
       }
 
-      // 渲染快速新增細項輸入列
+      // 渲染快速新增細項輸入列（移除克數欄位，讓手機輸入更寬敞）
       function renderQuickAddForm(catId, subId, placeholderText) {
         const subAttr = subId ? `data-sub-id="${subId}"` : '';
         return `
@@ -1015,15 +962,7 @@
               min="1"
               placeholder="數量"
               title="數量（預設 1）"
-              class="scale-input-text w-14 bg-slate-50 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-800 rounded-xl px-1.5 py-2 text-center placeholder:text-slate-400 focus:outline-none transition-all"
-            />
-            <input
-              type="number"
-              name="itemWeight"
-              min="0"
-              placeholder="克g"
-              title="單件重量 g（選填）"
-              class="scale-input-text w-16 hidden sm:block bg-slate-50 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-800 rounded-xl px-1.5 py-2 text-center placeholder:text-slate-400 focus:outline-none transition-all"
+              class="scale-input-text w-16 bg-slate-50 dark:bg-slate-800/90 border border-slate-200/80 dark:border-slate-700/80 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-800 rounded-xl px-1.5 py-2 text-center placeholder:text-slate-400 focus:outline-none transition-all"
             />
             <button
               type="submit"
@@ -1040,18 +979,8 @@
         const container = document.getElementById('categories-container');
         const emptyState = document.getElementById('empty-state');
         const titleEl = document.getElementById('list-title');
-        const editBtn = document.getElementById('toggle-edit-mode-btn');
-        const editLabel = document.getElementById('edit-mode-label');
 
         titleEl.textContent = state.title;
-
-        if (state.editMode) {
-          editBtn.className = 'inline-flex items-center gap-1 px-2.5 py-1.5 text-[13px] font-semibold rounded-xl border border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 transition-all cursor-pointer';
-          editLabel.textContent = '完成管理';
-        } else {
-          editBtn.className = 'inline-flex items-center gap-1 px-2.5 py-1.5 text-[13px] font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-700 dark:text-slate-200 transition-all cursor-pointer';
-          editLabel.textContent = '管理架構';
-        }
 
         const allBtn = document.getElementById('filter-all-btn');
         const uncheckedBtn = document.getElementById('filter-unchecked-btn');
@@ -1061,20 +990,12 @@
         uncheckedBtn.className = state.filter === 'unchecked' ? activeTabClass : inactiveTabClass;
 
         const stats = calculateStats();
-        document.getElementById('progress-count').textContent = `${stats.checked} / ${stats.total}`;
-        document.getElementById('progress-percent').textContent = `${stats.percent}%`;
-        document.getElementById('progress-bar-fill').style.width = `${stats.percent}%`;
-        document.getElementById('checked-weight-value').textContent = formatWeight(stats.checkedWeight, true);
-        document.getElementById('total-weight-value').textContent = formatWeight(stats.totalWeight, true);
-
         const subtitle = document.getElementById('status-subtitle');
         if (stats.total > 0 && stats.checked === stats.total) {
           subtitle.textContent = '所有行李項目皆已確認完畢！';
           subtitle.className = 'text-[12px] text-emerald-600 dark:text-emerald-400 font-semibold truncate';
         } else {
-          subtitle.textContent = state.editMode
-            ? '管理模式：可調整大組與小組順序'
-            : '自動儲存 · 離線可用';
+          subtitle.textContent = '按住左側 ⋮⋮ 可拖曳調整順序';
           subtitle.className = 'text-[12px] text-slate-500 dark:text-slate-400 truncate';
         }
 
@@ -1091,14 +1012,14 @@
         emptyState.classList.add('hidden');
 
         let renderedCategoriesCount = 0;
-        const html = state.categories.map((cat, catIndex) => {
+        const html = state.categories.map((cat) => {
           const subTotal = cat.subgroups.reduce((acc, s) => acc + s.items.length, 0);
           const subChecked = cat.subgroups.reduce((acc, s) => acc + s.items.filter(i => i.checked).length, 0);
           const catTotal = cat.items.length + subTotal;
           const catChecked = cat.items.filter(i => i.checked).length + subChecked;
           const isCatComplete = catTotal > 0 && catChecked === catTotal;
 
-          if (state.filter === 'unchecked' && !state.editMode && catTotal > 0 && isCatComplete) {
+          if (state.filter === 'unchecked' && catTotal > 0 && isCatComplete) {
             return '';
           }
 
@@ -1134,12 +1055,12 @@
             </div>
           `;
 
-          const subgroupsHtml = cat.subgroups.map((sub, subIndex) => {
+          const subgroupsHtml = cat.subgroups.map((sub) => {
             const sTotal = sub.items.length;
             const sChecked = sub.items.filter(i => i.checked).length;
             const isSubComplete = sTotal > 0 && sChecked === sTotal;
 
-            if (state.filter === 'unchecked' && !state.editMode && sTotal > 0 && isSubComplete) {
+            if (state.filter === 'unchecked' && sTotal > 0 && isSubComplete) {
               return '';
             }
 
@@ -1153,7 +1074,7 @@
                 <div class="flex items-center justify-between gap-1.5 mb-2">
                   <div class="flex items-center gap-1 min-w-0">
                     <span
-                      class="drag-handle p-1 rounded-lg text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 cursor-grab active:cursor-grabbing shrink-0"
+                      class="drag-handle sub-drag-handle p-1 rounded-lg text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 cursor-grab active:cursor-grabbing shrink-0"
                       title="按住上下拖曳調整小組順序"
                       aria-label="拖曳調整小組順序"
                     >
@@ -1186,30 +1107,6 @@
 
                   <!-- 小組管理操作 -->
                   <div class="flex items-center gap-1 shrink-0">
-                    ${state.editMode ? `
-                      <button
-                        type="button"
-                        data-action="move-sub-up"
-                        data-cat-id="${cat.id}"
-                        data-sub-id="${sub.id}"
-                        ${subIndex === 0 ? 'disabled' : ''}
-                        title="小組上移"
-                        class="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-30 cursor-pointer"
-                      >
-                        <i data-lucide="arrow-up" class="w-3.5 h-3.5"></i>
-                      </button>
-                      <button
-                        type="button"
-                        data-action="move-sub-down"
-                        data-cat-id="${cat.id}"
-                        data-sub-id="${sub.id}"
-                        ${subIndex === cat.subgroups.length - 1 ? 'disabled' : ''}
-                        title="小組下移"
-                        class="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-30 cursor-pointer"
-                      >
-                        <i data-lucide="arrow-down" class="w-3.5 h-3.5"></i>
-                      </button>
-                    ` : ''}
                     <button
                       type="button"
                       data-action="edit-subgroup"
@@ -1254,7 +1151,7 @@
               <div class="px-3 py-3 bg-slate-50/95 dark:bg-slate-800/70 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-1.5">
                 <div class="flex items-center gap-1 min-w-0">
                   <span
-                    class="drag-handle p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 cursor-grab active:cursor-grabbing shrink-0"
+                    class="drag-handle cat-drag-handle p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 cursor-grab active:cursor-grabbing shrink-0"
                     title="按住拖曳調整大組順序"
                     aria-label="拖曳調整大組順序"
                   >
@@ -1296,29 +1193,6 @@
                     <i data-lucide="folder-plus" class="w-3.5 h-3.5"></i>
                     <span>+ 小組</span>
                   </button>
-
-                  ${state.editMode ? `
-                    <button
-                      type="button"
-                      data-action="move-cat-up"
-                      data-cat-id="${cat.id}"
-                      ${catIndex === 0 ? 'disabled' : ''}
-                      title="大組上移"
-                      class="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-30 cursor-pointer"
-                    >
-                      <i data-lucide="arrow-up" class="w-4 h-4"></i>
-                    </button>
-                    <button
-                      type="button"
-                      data-action="move-cat-down"
-                      data-cat-id="${cat.id}"
-                      ${catIndex === state.categories.length - 1 ? 'disabled' : ''}
-                      title="大組下移"
-                      class="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 disabled:opacity-30 cursor-pointer"
-                    >
-                      <i data-lucide="arrow-down" class="w-4 h-4"></i>
-                    </button>
-                  ` : ''}
 
                   <button
                     type="button"
@@ -1386,7 +1260,7 @@
         if (catContainer) {
           sortableInstances.push(new Sortable(catContainer, {
             animation: 150,
-            handle: '> div > .flex > .drag-handle',
+            handle: '.cat-drag-handle',
             ghostClass: 'sortable-ghost',
             chosenClass: 'sortable-chosen',
             onEnd: () => {
@@ -1394,12 +1268,19 @@
                 .map(el => el.dataset.catId)
                 .filter(Boolean);
               if (orderedIds.length === 0) return;
-              const map = new Map(state.categories.map(c => [c.id, c]));
-              const reordered = orderedIds.map(id => map.get(id)).filter(Boolean);
-              state.categories.forEach(c => {
-                if (!orderedIds.includes(c.id)) reordered.push(c);
+
+              const catMap = new Map(state.categories.map(c => [c.id, c]));
+              const newCategories = [];
+              orderedIds.forEach(id => {
+                if (catMap.has(id)) {
+                  newCategories.push(catMap.get(id));
+                  catMap.delete(id);
+                }
               });
-              state.categories = reordered;
+              // 將「只看未完成」模式下隱藏的已完成大組接回尾端
+              catMap.forEach(rem => newCategories.push(rem));
+              state.categories = newCategories;
+
               saveState(true, '已更新大組順序');
               render();
             }
@@ -1411,21 +1292,30 @@
           const catId = subListEl.dataset.catId;
           sortableInstances.push(new Sortable(subListEl, {
             animation: 150,
-            handle: '> div > .flex > .drag-handle',
+            handle: '.sub-drag-handle',
             ghostClass: 'sortable-ghost',
             chosenClass: 'sortable-chosen',
             onEnd: () => {
               const cat = state.categories.find(c => c.id === catId);
               if (!cat) return;
-              const orderedSubIds = Array.from(subListEl.children)
+
+              const orderedIds = Array.from(subListEl.children)
                 .map(el => el.dataset.subId)
                 .filter(Boolean);
-              const map = new Map(cat.subgroups.map(s => [s.id, s]));
-              const reordered = orderedSubIds.map(id => map.get(id)).filter(Boolean);
-              cat.subgroups.forEach(s => {
-                if (!orderedSubIds.includes(s.id)) reordered.push(s);
+              if (orderedIds.length === 0) return;
+
+              const subMap = new Map(cat.subgroups.map(s => [s.id, s]));
+              const newSubgroups = [];
+              orderedIds.forEach(id => {
+                if (subMap.has(id)) {
+                  newSubgroups.push(subMap.get(id));
+                  subMap.delete(id);
+                }
               });
-              cat.subgroups = reordered;
+              // 將「只看未完成」模式下隱藏的已完成小組接回尾端
+              subMap.forEach(rem => newSubgroups.push(rem));
+              cat.subgroups = newSubgroups;
+
               saveState(true, '已更新小組順序');
               render();
             }
@@ -1438,7 +1328,7 @@
           sortableInstances.push(new Sortable(itemListEl, {
             group: `items-group-${catId}`,
             animation: 150,
-            handle: '.drag-handle',
+            handle: '.item-drag-handle',
             ghostClass: 'sortable-ghost',
             chosenClass: 'sortable-chosen',
             onEnd: (evt) => {
@@ -1530,13 +1420,7 @@
           render();
         });
 
-        // 4. 管理架構模式切換
-        document.getElementById('toggle-edit-mode-btn').addEventListener('click', () => {
-          state.editMode = !state.editMode;
-          render();
-        });
-
-        // 5. 清空所有打勾（保留大組、小組與細項架構）
+        // 4. 清空所有打勾（保留大組、小組與細項架構）
         document.getElementById('reset-checks-btn').addEventListener('click', async () => {
           const stats = calculateStats();
           if (stats.checked === 0) {
@@ -1701,7 +1585,6 @@
 
           const nameInput = form.querySelector('input[name="itemName"]');
           const qtyInput = form.querySelector('input[name="itemQty"]');
-          const weightInput = form.querySelector('input[name="itemWeight"]');
 
           const name = nameInput.value.trim();
           if (!name) return;
@@ -1711,7 +1594,7 @@
             name,
             checked: false,
             qty: parseInt(qtyInput.value, 10) || 1,
-            weight: parseInt(weightInput.value, 10) || 0,
+            weight: 0,
             note: ''
           });
 
@@ -1776,20 +1659,6 @@
               saveState(true, `已刪除「${cat.name}」`);
               render();
             }
-            return;
-          }
-
-          // 大組上下移動
-          if (action === 'move-cat-up' && catIndex > 0) {
-            [state.categories[catIndex - 1], state.categories[catIndex]] = [state.categories[catIndex], state.categories[catIndex - 1]];
-            saveState(true, '已調整大組順序');
-            render();
-            return;
-          }
-          if (action === 'move-cat-down' && catIndex < state.categories.length - 1) {
-            [state.categories[catIndex + 1], state.categories[catIndex]] = [state.categories[catIndex], state.categories[catIndex + 1]];
-            saveState(true, '已調整大組順序');
-            render();
             return;
           }
 
@@ -1875,19 +1744,6 @@
             return;
           }
 
-          if (action === 'move-sub-up' && sub && subIndex > 0) {
-            [cat.subgroups[subIndex - 1], cat.subgroups[subIndex]] = [cat.subgroups[subIndex], cat.subgroups[subIndex - 1]];
-            saveState(true, '已調整小組順序');
-            render();
-            return;
-          }
-          if (action === 'move-sub-down' && sub && subIndex < cat.subgroups.length - 1) {
-            [cat.subgroups[subIndex + 1], cat.subgroups[subIndex]] = [cat.subgroups[subIndex], cat.subgroups[subIndex + 1]];
-            saveState(true, '已調整小組順序');
-            render();
-            return;
-          }
-
           // 細項編輯與刪除
           const itemList = sub ? sub.items : cat.items;
           const itemIndex = itemId ? itemList.findIndex(i => i.id === itemId) : -1;
@@ -1906,7 +1762,6 @@
               mode: 'edit-item',
               defaultName: item.name,
               defaultQty: item.qty,
-              defaultWeight: item.weight,
               defaultNote: item.note,
               locationOptions,
               defaultLocation: sub ? sub.id : 'direct',
@@ -1915,7 +1770,6 @@
             if (res && res.name) {
               item.name = res.name;
               item.qty = res.qty;
-              item.weight = res.weight;
               item.note = res.note;
 
               const currentLoc = sub ? sub.id : 'direct';
